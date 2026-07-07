@@ -42,7 +42,15 @@ export default function Projects({ projects }: ProjectsProps) {
                 rel={project.link !== "#" ? "noopener noreferrer" : undefined}
                 style={{ display: "block", color: "inherit", textDecoration: "none" }}
               >
-                <img src={project.image} alt={project.title} />
+                <img 
+                  src={project.image || "/assets/portofolio.png"} 
+                  alt={project.title} 
+                  onError={(e) => {
+                    const img = e.target as HTMLImageElement;
+                    img.onerror = null;
+                    img.src = "/assets/portofolio.png";
+                  }}
+                />
                 <div className="desc">
                   <h1>{project.title}</h1>
                   <p>{project.description}</p>
