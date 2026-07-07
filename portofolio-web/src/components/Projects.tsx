@@ -12,6 +12,21 @@ interface ProjectsProps {
   projects: Project[];
 }
 
+const getProjectPreview = (image: string, link: string) => {
+  if (!image || image === "/assets/portofolio.png") {
+    if (link && link.includes("github.com/")) {
+      const parts = link.split("github.com/");
+      if (parts.length > 1) {
+        const repoPath = parts[1].split("?")[0];
+        return `https://opengraph.githubassets.com/1/${repoPath}`;
+      }
+    } else if (link && link.startsWith("http")) {
+      return `https://api.microlink.io?url=${encodeURIComponent(link)}&screenshot=true&embed=screenshot.url`;
+    }
+  }
+  return image || "/assets/portofolio.png";
+};
+
 export default function Projects({ projects }: ProjectsProps) {
   return (
     <section className="project" id="project">
@@ -43,7 +58,7 @@ export default function Projects({ projects }: ProjectsProps) {
                 style={{ display: "block", color: "inherit", textDecoration: "none" }}
               >
                 <img 
-                  src={project.image || "/assets/portofolio.png"} 
+                  src={getProjectPreview(project.image, project.link)} 
                   alt={project.title} 
                   onError={(e) => {
                     const img = e.target as HTMLImageElement;
