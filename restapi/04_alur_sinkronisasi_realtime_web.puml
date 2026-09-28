@@ -1,0 +1,68 @@
+@startuml alur_sinkronisasi_realtime_web
+skinparam backgroundColor #FFFFFF
+skinparam handwritten false
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam BoxPadding 15
+skinparam ParticipantPadding 15
+skinparam SequenceLifeLineBorderColor #333333
+skinparam SequenceLifeLineBackgroundColor #F8F9FA
+skinparam ArrowColor #222222
+skinparam NoteBorderColor #CCCCCC
+skinparam NoteBackgroundColor #FFFFE0
+
+title Diagram Alur Sinkronisasi Data Realtime & WebSocket (Tanpa Refresh)
+
+actor "Firman (Admin)" as Admin
+participant "portofolio-admin\n(Dashboard CMS)" as AdminApp
+database "PostgreSQL Database\n(Supabase Cloud)" as DB
+participant "Realtime Engine\n(WebSocket Server)" as RealtimeEngine
+participant "portofolio-web\n(React State Manager)" as WebClient
+actor "Pengunjung Web" as User
+
+== 1. Inisialisasi Koneksi Realtime saat Pengunjung Membuka Web ==
+User -> WebClient: Membuka website portofolio
+activate WebClient
+
+WebClient -> DB: Initial fetch data (getProfile, getProjects, getSkills)
+activate DB
+DB --> WebClient: Return data aktif (Status 200 OK)
+deactivate DB
+
+WebClient -> RealtimeEngine: Hubungkan WebSocket Channel:\nsupabase.channel('realtime-about-profile-web')\n.on('postgres_changes', {event: '*', schema: 'public', table: 'profile'}, callback)\n.subscribe()
+activate RealtimeEngine
+RealtimeEngine --> WebClient: WebSocket Connection Established (CHANNEL_JOINED)
+
+WebClient --> User: Tampilan website siap digunakan
+deactivate WebClient
+
+== 2. Admin Mengubah Data di CMS ==
+Admin -> AdminApp: Mengubah bio / nama panggilan / menambah proyek baru
+activate AdminApp
+Admin -> AdminApp: Klik tombol "Simpan"
+AdminApp -> DB: SQL UPDATE/INSERT (via REST API PostgREST)
+activate DB
+DB -> DB: Data tersimpan permanen di database
+DB --> AdminApp: Status 200 OK / 201 Created
+AdminApp --> Admin: Toast notifikasi: "Berhasil disimpan!"
+deactivate AdminApp
+
+== 3. Penyiaran Perubahan secara Realtime (Push Event) ==
+DB -> RealtimeEngine: Trigger Internal Database (pg_notify / WAL log)
+deactivate DB
+RealtimeEngine -> RealtimeEngine: Format event payload (TABLE: profile/projects, EVENT: UPDATE)
+
+RealtimeEngine -->> WebClient: WebSocket Message Push (Event: postgres_changes)\nPayload: {eventType: "UPDATE", new: {shortName: "Firman", ...}}
+activate WebClient
+
+note over WebClient: Callback realtime terpanggil:\n1. State React di-update dengan nilai baru\n2. Re-render komponen yang terpengaruh saja (misal: Footer.tsx)\n3. TIDAK memerlukan refresh browser sama sekali!
+
+WebClient --> User: Teks & elemen website berubah secara instan di depan mata pengunjung!
+deactivate WebClient
+
+== 4. Proteksi Fallback (Window Focus Event) ==
+note over WebClient: Jika koneksi WebSocket sempat terputus saat pengunjung berganti tab browser:\nListener window.addEventListener('focus', loadLiveData)\nakan otomatis mengambil data terbaru saat tab kembali aktif.
+
+@enduml

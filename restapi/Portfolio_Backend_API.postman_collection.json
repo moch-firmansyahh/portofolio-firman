@@ -1,0 +1,646 @@
+{
+  "info": {
+    "_postman_id": "portfolio-rest-api-v1",
+    "name": "Portfolio Management REST API (Port 5000)",
+    "description": "Koleksi Postman REST API terstruktur rapi dengan subfolder modular untuk menguji seluruh fitur Portfolio Admin CMS & Portofolio Web.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "admin_password",
+      "value": "firman2026",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. System & Health",
+      "item": [
+        {
+          "name": "Health Check Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            },
+            "description": "Mengecek apakah server backend Express.js aktif dan berjalan normal."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Autentikasi Admin",
+      "item": [
+        {
+          "name": "POST - Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Verifikasi password admin dan generate session token."
+          },
+          "response": []
+        },
+        {
+          "name": "GET - Check Session Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer admin-session-token"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/session",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "session"]
+            },
+            "description": "Mengecek apakah sesi admin masih valid."
+          },
+          "response": []
+        },
+        {
+          "name": "POST - Admin Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "Mengakhiri sesi login admin."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Profil & Beranda",
+      "item": [
+        {
+          "name": "READ - Get Profile Data",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "profile"]
+            },
+            "description": "Mengambil data profil lengkap untuk tampilan Hero & About."
+          },
+          "response": []
+        },
+        {
+          "name": "UPDATE - Update Profile Data (Sanitized)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Moch Firmansyah\",\n  \"shortName\": \"Agus\",\n  \"role\": \"Frontend Developer & Security Enthusiast\",\n  \"tagline\": \"Code that looks good. Systems that stay safe.\",\n  \"status\": \"Open for work\",\n  \"email\": \"firmanajah366@gmail.com\",\n  \"phone\": \"+62 811 2222 136\",\n  \"about\": \"Mahasiswa Informatika Telkom University yang fokus memadukan Frontend Development modern dengan pemahaman Web Security.\",\n  \"bio\": \"Sebagai mahasiswa Teknik Informatika di Telkom University, saya berdedikasi untuk menerapkan keterampilan analitis dan keahlian teknis saya dalam peran Front-End Developer di industri teknologi.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "profile"]
+            },
+            "description": "Memperbarui profil admin dengan whitelist sanitization otomatis."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Proyek & Portofolio",
+      "item": [
+        {
+          "name": "4.1 Manajemen Proyek (CRUD Inti)",
+          "item": [
+            {
+              "name": "READ - Get All Projects",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/projects",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "projects"]
+                },
+                "description": "Mengambil semua daftar proyek portofolio."
+              },
+              "response": []
+            },
+            {
+              "name": "READ - Get Project by ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/projects/:id",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "projects", ":id"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "465e9245-6023-41f4-a98e-302a64451a54"
+                    }
+                  ]
+                },
+                "description": "Mengambil satu proyek spesifik berdasarkan UUID."
+              },
+              "response": []
+            },
+            {
+              "name": "CREATE - Create New Project",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Aplikasi Monitoring Jaringan & Port Scanner\",\n  \"subtitle\": \"Network Security Tool\",\n  \"description\": \"Alat pendeteksi kerentanan port dan analisis lalu lintas jaringan berbasis web responsif.\",\n  \"longDescription\": \"Proyek ini dibangun untuk mempermudah analisis celah keamanan jaringan lokal secara real-time.\",\n  \"tags\": [\"Next.js\", \"TypeScript\", \"Tailwind CSS\", \"Security\"],\n  \"category\": \"Cyber Security\",\n  \"featured\": true,\n  \"metrics\": \"99% Detection Rate\",\n  \"highlights\": [\n    \"Analisis port terbuka dalam hitungan detik\",\n    \"Dashboard visual interaktif berbasis canvas\",\n    \"Integrasi alert security real-time\"\n  ],\n  \"year\": \"2026\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/projects",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "projects"]
+                },
+                "description": "Menambahkan proyek baru ke database (sekaligus menginisialisasi studi kasus bawaan)."
+              },
+              "response": []
+            },
+            {
+              "name": "UPDATE - Update Project Info",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Aplikasi Monitoring Jaringan & Port Scanner (Updated)\",\n  \"subtitle\": \"Network & Cloud Security Tool\",\n  \"description\": \"Deskripsi proyek yang telah diperbarui melalui Postman.\",\n  \"featured\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/projects/:id",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "projects", ":id"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "465e9245-6023-41f4-a98e-302a64451a54"
+                    }
+                  ]
+                },
+                "description": "Memperbarui informasi umum proyek."
+              },
+              "response": []
+            },
+            {
+              "name": "DELETE - Delete Project",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/projects/:id",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "projects", ":id"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "GANTI_DENGAN_ID_PROYEK"
+                    }
+                  ]
+                },
+                "description": "Menghapus proyek dari sistem."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "4.2 Detail Studi Kasus (/projects/[id])",
+          "item": [
+            {
+              "name": "READ - Get Case Study Details by Project ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/projects/:id/case-study",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "projects", ":id", "case-study"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "465e9245-6023-41f4-a98e-302a64451a54"
+                    }
+                  ]
+                },
+                "description": "Mengambil khusus narasi dan rincian lengkap Detail Studi Kasus (/projects/[id])."
+              },
+              "response": []
+            },
+            {
+              "name": "CREATE - Inisialisasi Detail Studi Kasus (POST)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"subtitle\": \"Sistem Pemindaian Port & Arsitektur Jaringan\",\n  \"longDescription\": \"Studi kasus ini mendokumentasikan proses perancangan sistem pemindai keamanan jaringan dari tahap riset soket TCP hingga visualisasi status port terbuka pada antarmuka web.\",\n  \"highlights\": [\n    \"Riset arsitektur soket TCP non-blocking\",\n    \"Deteksi port 21, 22, 80, 443, 3000 secara paralel\",\n    \"Integrasi indikator warna tingkat risiko port\",\n    \"Ekspor laporan hasil audit format PDF & JSON\"\n  ],\n  \"metrics\": \"Kecepatan Pindai < 3 Detik • Akurasi 99.8% • Zero Crash\",\n  \"tags\": [\"Next.js\", \"TypeScript\", \"Network Security\", \"Wireshark\"]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/projects/:id/case-study",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "projects", ":id", "case-study"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "465e9245-6023-41f4-a98e-302a64451a54"
+                    }
+                  ]
+                },
+                "description": "Menyimpan/menginisialisasi narasi studi kasus baru pada proyek yang sudah terdaftar."
+              },
+              "response": []
+            },
+            {
+              "name": "UPDATE - Perbarui Narasi & Highlights (PUT)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"subtitle\": \"Sistem Manajemen Kost Digital Modern & Responsif\",\n  \"longDescription\": \"Kontrakan Pa Iman adalah aplikasi web Full-Stack yang dirancang untuk mempermudah pemilik kost dalam mengelola unit kamar, mencatat penyewa, dan memantau histori pembayaran sewa secara otomatis.\",\n  \"highlights\": [\n    \"Dashboard Ringkasan Real-Time dengan 4 Stat Card interaktif\",\n    \"Manajemen Unit Kamar dengan Instant Search dan filter status ketersediaan\",\n    \"Pencatatan Histori Pembayaran Sewa dan otomasi invoice digital\",\n    \"Arsitektur responsif dan ramah perangkat mobile (PWA Ready)\"\n  ],\n  \"metrics\": \"Full-Stack • Real-time Stats • PWA Ready • 99% Uptime\",\n  \"tags\": [\"Next.js 16\", \"TypeScript\", \"Tailwind CSS\", \"PostgreSQL\", \"Supabase\"]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/projects/:id/case-study",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "projects", ":id", "case-study"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "465e9245-6023-41f4-a98e-302a64451a54"
+                    }
+                  ]
+                },
+                "description": "Memperbarui narasi, poin kemampuan sistem (highlights checklist), dan key metrics untuk halaman studi kasus (/projects/[id])."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Keahlian & Tech Stack",
+      "item": [
+        {
+          "name": "5.1 Item Keahlian (Skills)",
+          "item": [
+            {
+              "name": "READ - Get All Skills",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/skills",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "skills"]
+                },
+                "description": "Mengambil seluruh daftar keahlian/skill."
+              },
+              "response": []
+            },
+            {
+              "name": "CREATE - Create New Skill",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Postman API Testing\",\n  \"logo\": \"https://www.vectorlogo.zone/logos/getpostman/getpostman-icon.svg\",\n  \"percent\": 90,\n  \"category\": \"Front-End Web Development\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/skills",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "skills"]
+                },
+                "description": "Menambahkan keahlian baru ke tabel skills."
+              },
+              "response": []
+            },
+            {
+              "name": "UPDATE - Update Skill by ID",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Postman API Automation & Testing\",\n  \"percent\": 95\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/skills/:id",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "skills", ":id"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "GANTI_DENGAN_ID_SKILL"
+                    }
+                  ]
+                },
+                "description": "Memperbarui nama, logo, atau persentase penguasaan keahlian."
+              },
+              "response": []
+            },
+            {
+              "name": "DELETE - Delete Skill by ID",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/skills/:id",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "skills", ":id"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "GANTI_DENGAN_ID_SKILL"
+                    }
+                  ]
+                },
+                "description": "Menghapus satu keahlian berdasarkan ID."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "5.2 Kategori Keahlian (Categories)",
+          "item": [
+            {
+              "name": "CREATE - Buat Kategori Baru (POST)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"category\": \"DevOps & Cloud Computing\",\n  \"skills\": [\n    {\n      \"name\": \"Docker\",\n      \"logo\": \"https://www.vectorlogo.zone/logos/docker/docker-icon.svg\",\n      \"percent\": 85\n    },\n    {\n      \"name\": \"Kubernetes\",\n      \"logo\": \"https://www.vectorlogo.zone/logos/kubernetes/kubernetes-icon.svg\",\n      \"percent\": 75\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/skills/category",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "skills", "category"]
+                },
+                "description": "Membuat kategori baru sekaligus mengisinya dengan beberapa keahlian awal."
+              },
+              "response": []
+            },
+            {
+              "name": "DELETE - Hapus Kategori & Isinya (DELETE)",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/skills/category/:category",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "skills", "category", ":category"],
+                  "variable": [
+                    {
+                      "key": "category",
+                      "value": "Tools & Productivity"
+                    }
+                  ]
+                },
+                "description": "Menghapus seluruh keahlian dalam satu kategori sekaligus."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Riwayat Pengalaman & Karir",
+      "item": [
+        {
+          "name": "READ - Get All Experiences",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/experiences",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "experiences"]
+            },
+            "description": "Mengambil semua riwayat pendidikan dan pengalaman kerja."
+          },
+          "response": []
+        },
+        {
+          "name": "CREATE - Create New Experience",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"period\": \"2025 - Sekarang\",\n  \"role\": \"Junior Security Analyst & Full-Stack Developer\",\n  \"company\": \"Telkom University Cyber Security Lab\",\n  \"location\": \"Bandung, Jawa Barat, Indonesia\",\n  \"description\": \"Melakukan audit keamanan aplikasi web, pengujian penetrasi antarmuka, dan implementasi secure coding.\",\n  \"technologies\": [\"React\", \"TypeScript\", \"Node.js\", \"Wireshark\", \"OWASP\"],\n  \"type\": \"Work\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/experiences",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "experiences"]
+            },
+            "description": "Menambahkan riwayat karir atau pendidikan baru."
+          },
+          "response": []
+        },
+        {
+          "name": "UPDATE - Update Experience by ID",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"Senior Web Developer & Security Enthusiast\",\n  \"description\": \"Pengembangan aplikasi web skala enterprise dengan penekanan pada keamanan data dan performa tinggi.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/experiences/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "experiences", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "GANTI_DENGAN_ID_PENGALAMAN"
+                }
+              ]
+            },
+            "description": "Memperbarui rincian pengalaman kerja/pendidikan."
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE - Delete Experience by ID",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/experiences/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "experiences", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "GANTI_DENGAN_ID_PENGALAMAN"
+                }
+              ]
+            },
+            "description": "Menghapus data riwayat pengalaman berdasarkan ID."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. Pesan Kontak",
+      "item": [
+        {
+          "name": "READ - Get All Messages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "messages"]
+            },
+            "description": "Mengambil semua daftar pesan masuk dari pengunjung web."
+          },
+          "response": []
+        },
+        {
+          "name": "UPDATE - Mark Message as Read/Unread",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"read\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/:id/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "messages", ":id", "read"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "GANTI_DENGAN_ID_PESAN"
+                }
+              ]
+            },
+            "description": "Mengubah status pesan menjadi sudah dibaca (read: true) atau belum dibaca (read: false)."
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE - Delete Message by ID",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "messages", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "GANTI_DENGAN_ID_PESAN"
+                }
+              ]
+            },
+            "description": "Menghapus pesan dari database."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

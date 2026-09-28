@@ -1,0 +1,111 @@
+@startuml arsitektur_global_dan_aliran_data
+skinparam backgroundColor #FFFFFF
+skinparam handwritten false
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam BoxPadding 15
+skinparam ParticipantPadding 15
+skinparam SequenceLifeLineBorderColor #333333
+skinparam SequenceLifeLineBackgroundColor #F8F9FA
+skinparam ArrowColor #222222
+skinparam NoteBorderColor #CCCCCC
+skinparam NoteBackgroundColor #FFFFE0
+
+title Diagram Arsitektur Global & Alur REST API Terpadu
+
+box "Frontend Pengunjung" #F8F9FA
+    actor "Pengunjung\n(Public Visitor)" as User
+    participant "portofolio-web\n(Next.js App)" as Web
+    participant "API Route\n/api/contact" as ContactAPI
+end box
+
+box "Backend & Database Cloud" #EEF2FF
+    participant "Supabase\nPostgREST & Storage" as SupabaseAPI
+    database "PostgreSQL\nDatabase" as DB
+    participant "Supabase\nRealtime (WebSocket)" as Realtime
+end box
+
+box "Frontend CMS Admin" #F0FDF4
+    actor "Firman\n(Admin)" as Admin
+    participant "portofolio-admin\n(Next.js App)" as AdminApp
+    participant "Admin API Route\n/api/auth/*" as AuthAPI
+end box
+
+box "External Provider" #FEF3C7
+    participant "GitHub API v3\n(api.github.com)" as GitHubAPI
+end box
+
+== 1. Pengunjung Mengakses Website ==
+User -> Web: Buka website (/)
+activate Web
+Web -> SupabaseAPI: GET /rest/v1/profile, projects, skills, experiences
+activate SupabaseAPI
+SupabaseAPI -> DB: Query data aktif
+DB --> SupabaseAPI: Return baris data JSON
+SupabaseAPI --> Web: Response JSON (Status 200 OK)
+deactivate SupabaseAPI
+Web -> Realtime: Subscribe channel realtime (WebSocket)
+Web --> User: Render UI interaktif, bio, tech stack, dan studi kasus
+deactivate Web
+
+== 2. Pengunjung Mengirim Pesan Kontak (REST API Internal) ==
+User -> Web: Isi form kontak & klik "Kirim Pesan"
+activate Web
+Web -> ContactAPI: POST /api/contact\n{name, email, subject, message, botField}
+activate ContactAPI
+note over ContactAPI: - Validasi format email & sanitasi\n- Rate Limit: Maks 4 pesan per 10 menit\n- Honeypot check: botField harus kosong
+ContactAPI -> SupabaseAPI: INSERT into "messages"
+SupabaseAPI -> DB: Simpan pesan masuk
+DB --> SupabaseAPI: Status 201 Created
+ContactAPI --> Web: Response JSON {success: true}\n(Status 200 OK)
+deactivate ContactAPI
+Web --> User: Tampilkan notifikasi sukses & confetti animasi
+Realtime -->> AdminApp: Broadcast event pesan baru
+deactivate Web
+
+== 3. Autentikasi Pengelola CMS (Admin Session) ==
+Admin -> AdminApp: Buka dashboard admin & masukkan password
+activate AdminApp
+AdminApp -> AuthAPI: POST /api/auth/login {password}
+activate AuthAPI
+note over AuthAPI: Verifikasi password via environment hash
+AuthAPI --> AdminApp: Set HTTP-Only Cookie (Session Token)\nStatus 200 OK
+deactivate AuthAPI
+AdminApp --> Admin: Masuk ke Dashboard Admin
+deactivate AdminApp
+
+== 4. Manajemen CRUD Konten & Detail Studi Kasus ==
+Admin -> AdminApp: Tambah / Edit Proyek & Detail Studi Kasus
+activate AdminApp
+AdminApp -> SupabaseAPI: PUT/POST /rest/v1/projects\n{title, longDescription, highlights, metrics, ...}
+activate SupabaseAPI
+SupabaseAPI -> DB: UPDATE / INSERT data proyek
+DB --> SupabaseAPI: Status 200 OK / 201 Created
+SupabaseAPI --> AdminApp: Response data proyek ter-update
+AdminApp --> Admin: Notifikasi toast "Proyek berhasil diperbarui!"
+deactivate SupabaseAPI
+
+DB -> Realtime: Event TRIGGER (UPDATE projects)
+Realtime -->> Web: WebSocket push payload (Data berubah)
+Web --> User: Tampilan website otomatis ter-update (Tanpa reload!)
+deactivate AdminApp
+
+== 5. Sinkronisasi Data dari GitHub API ==
+Admin -> AdminApp: Klik tombol "Sinkronkan dengan GitHub"
+activate AdminApp
+AdminApp -> GitHubAPI: GET https://api.github.com/users/moch-firmansyahh
+AdminApp -> GitHubAPI: GET https://api.github.com/users/moch-firmansyahh/repos
+activate GitHubAPI
+GitHubAPI --> AdminApp: JSON repositori publik, stars, fork, bahasa
+deactivate GitHubAPI
+AdminApp -> AdminApp: Komparasi repositori baru vs database
+AdminApp --> Admin: Muncul dialog konfirmasi impor data GitHub
+Admin -> AdminApp: Konfirmasi setuju impor
+AdminApp -> SupabaseAPI: INSERT into "projects" / "skills"
+SupabaseAPI -> DB: Simpan hasil impor GitHub
+AdminApp --> Admin: Notifikasi "Sinkronisasi GitHub Selesai"
+deactivate AdminApp
+
+@enduml

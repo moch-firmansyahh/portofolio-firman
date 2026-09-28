@@ -1,0 +1,77 @@
+@startuml alur_sinkronisasi_github_api
+skinparam backgroundColor #FFFFFF
+skinparam handwritten false
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam BoxPadding 15
+skinparam ParticipantPadding 15
+skinparam SequenceLifeLineBorderColor #333333
+skinparam SequenceLifeLineBackgroundColor #F8F9FA
+skinparam ArrowColor #222222
+skinparam NoteBorderColor #CCCCCC
+skinparam NoteBackgroundColor #FFFFE0
+
+title Diagram Alur Sinkronisasi GitHub REST API v3
+
+actor "Firman (Admin)" as Admin
+participant "DashboardTab / SkillsTab\n(Frontend Admin)" as AdminUI
+participant "github.ts\n(API Fetcher Client)" as GitHubFetcher
+participant "GitHub REST API v3\n(api.github.com)" as GitHubServer
+participant "ConfirmModal.tsx\n(Dialog Konfirmasi)" as ConfirmModal
+database "PostgreSQL Database\n(Supabase Cloud)" as DB
+
+== 1. Permintaan Sinkronisasi Akun & Repositori ==
+Admin -> AdminUI: Klik tombol "Sinkronkan dengan GitHub"
+activate AdminUI
+
+AdminUI -> GitHubFetcher: fetchGitHubProfile('moch-firmansyahh')\n& fetchGitHubRepos('moch-firmansyahh')
+activate GitHubFetcher
+
+par 1. Mengambil Informasi Profil Pengguna
+    GitHubFetcher -> GitHubServer: HTTP GET https://api.github.com/users/moch-firmansyahh\nHeaders: Accept: application/vnd.github.v3+json
+    activate GitHubServer
+    GitHubServer --> GitHubFetcher: HTTP 200 OK\nJSON: {login, name, public_repos, followers, avatar_url, bio}
+    deactivate GitHubServer
+else 2. Mengambil Seluruh Repositori Publik
+    GitHubFetcher -> GitHubServer: HTTP GET https://api.github.com/users/moch-firmansyahh/repos?per_page=100&sort=updated\nHeaders: Accept: application/vnd.github.v3+json
+    activate GitHubServer
+    GitHubServer --> GitHubFetcher: HTTP 200 OK\nJSON: Array [{name, stargazers_count, language, forks_count, html_url, ...}]
+    deactivate GitHubServer
+end
+
+GitHubFetcher --> AdminUI: Return {gitProfile, gitRepos}
+deactivate GitHubFetcher
+
+== 2. Pengolahan Data di Sisi Klien (Client-Side Aggregation) ==
+AdminUI -> AdminUI: 1. Hitung Akumulasi Total Stars (reduce stargazers_count)
+AdminUI -> AdminUI: 2. Ekstrak Bahasa Pemrograman unik (JavaScript, TypeScript, Python, etc.)
+AdminUI -> AdminUI: 3. Komparasi dengan daftar skill & proyek yang sudah ada di database
+
+alt Semua bahasa & repositori sudah terdaftar di database
+    AdminUI --> Admin: Tampilkan notifikasi info: "Semua data dari GitHub sudah sinkron!"
+else Ditemukan bahasa / repositori baru yang belum ada
+    AdminUI -> ConfirmModal: Buka dialog konfirmasi:\n"Ditemukan X bahasa baru: [Python, Go]. Tambahkan ke database?"
+    activate ConfirmModal
+    ConfirmModal -> Admin: Menampilkan dialog opsi impor
+
+    alt Admin Menolak / Membatalkan
+        Admin -> ConfirmModal: Klik "Batal"
+        ConfirmModal --> AdminUI: Batal impor
+    else Admin Menyetujui Impor
+        Admin -> ConfirmModal: Klik "Impor Skill / Proyek"
+        ConfirmModal -> AdminUI: Eksekusi impor otomatis
+        deactivate ConfirmModal
+
+        AdminUI -> DB: INSERT INTO skills (name, category, percent, logo)\nVALUES ('Python', 'Programming Languages', 80, 'PYT'), ...
+        activate DB
+        DB --> AdminUI: Status 201 Created
+        deactivate DB
+
+        AdminUI --> Admin: Tampilkan toast sukses: "Data berhasil disinkronkan ke database!"
+    end
+end
+
+deactivate AdminUI
+@enduml

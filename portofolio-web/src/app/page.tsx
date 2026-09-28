@@ -1,71 +1,56 @@
-import { db } from "@/lib/firebase";
-import { collection, getDocs } from "firebase/firestore";
-import Header from "@/components/Header";
-import Hero from "@/components/Hero";
-import About from "@/components/About";
-import Skills from "@/components/Skills";
-import Projects from "@/components/Projects";
-import Contact from "@/components/Contact";
-import Footer from "@/components/Footer";
+import SmoothScroll from "@/components/effects/SmoothScroll";
+import Preloader from "@/components/layout/Preloader";
+import AmbientCursor from "@/components/effects/AmbientCursor";
+import Navbar from "@/components/layout/Navbar";
+import HeroSection from "@/components/sections/HeroSection";
+import TechMarquee from "@/components/effects/TechMarquee";
+import AboutSection from "@/components/sections/AboutSection";
+import SkillsSection from "@/components/sections/SkillsSection";
+import ProjectsSection from "@/components/sections/ProjectsSection";
+import ExperienceSection from "@/components/sections/ExperienceSection";
+import ContactSection from "@/components/sections/ContactSection";
+import Footer from "@/components/layout/Footer";
 
-// Force dynamic rendering to ensure updates from Firebase reflect instantly without caching
-export const dynamic = "force-dynamic";
-
-async function getPortfolioData() {
-  try {
-    // Fetch skills from Firestore
-    const skillsSnapshot = await getDocs(collection(db, "skills"));
-    const skillsData = skillsSnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        name: data.name || "",
-        logo: data.logo || "",
-        percent: data.percent || 0,
-        createdAt: data.createdAt ? (data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt)) : new Date(0)
-      };
-    });
-    skillsData.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-
-    // Fetch projects from Firestore
-    const projectsSnapshot = await getDocs(collection(db, "projects"));
-    const projectsData = projectsSnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        title: data.title || "",
-        description: data.description || "",
-        image: data.image || "",
-        link: data.link || "",
-        createdAt: data.createdAt ? (data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt)) : new Date(0)
-      };
-    });
-    projectsData.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-
-    return {
-      skills: skillsData,
-      projects: projectsData,
-    };
-  } catch (error) {
-    console.warn("Error fetching portfolio data from Firebase:", (error as any)?.message || error);
-    return { skills: [], projects: [] };
-  }
-}
-
-export default async function Home() {
-  const data = await getPortfolioData();
-
+export default function Home() {
   return (
-    <>
-      <Header />
-      <main>
-        <Hero />
-        <About />
-        <Skills skills={data.skills} />
-        <Projects projects={data.projects} />
-        <Contact />
-      </main>
-      <Footer />
-    </>
+    <SmoothScroll>
+      <div className="flex flex-col min-h-screen bg-[#F8F9FA] bg-grain-texture text-[#0F172A] relative selection:bg-neutral-900 selection:text-white">
+        {/* Preloader Curtain Reveal */}
+        <Preloader />
+
+        {/* Ambient Cursor Follower */}
+        <AmbientCursor />
+
+        {/* Navigation Bar */}
+        <Navbar />
+
+        {/* Main Content */}
+        <main className="flex-1 flex flex-col">
+          {/* 1. Hero Section with Dynamic Role Animation & CTAs */}
+          <HeroSection />
+
+          {/* 2. Infinite Tech Stack Kinetic Marquee */}
+          <TechMarquee />
+
+          {/* 3. About Section with Bio & Qualifications */}
+          <AboutSection />
+
+          {/* 4. Skills Section with Animated Sliding Tabs & Level Meters */}
+          <SkillsSection />
+
+          {/* 5. Selected Featured Projects with Live Data Fetching */}
+          <ProjectsSection />
+
+          {/* 6. Career & Learning Milestones with Dynamic Scroll Drawing Line */}
+          <ExperienceSection />
+
+          {/* 7. Contact & Social Links with Secure API Route Submission */}
+          <ContactSection />
+        </main>
+
+        {/* Footer */}
+        <Footer />
+      </div>
+    </SmoothScroll>
   );
 }

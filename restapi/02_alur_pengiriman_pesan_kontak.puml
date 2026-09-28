@@ -1,0 +1,90 @@
+@startuml alur_pengiriman_pesan_kontak
+skinparam backgroundColor #FFFFFF
+skinparam handwritten false
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam BoxPadding 15
+skinparam ParticipantPadding 15
+skinparam SequenceLifeLineBorderColor #333333
+skinparam SequenceLifeLineBackgroundColor #F8F9FA
+skinparam ArrowColor #222222
+skinparam NoteBorderColor #CCCCCC
+skinparam NoteBackgroundColor #FFFFE0
+
+title Diagram Alur REST API: Pengiriman Pesan Kontak (/api/contact)
+
+actor "Pengunjung Web" as User
+participant "ContactSection.tsx\n(Client Component)" as Client
+participant "Next.js Route Handler\n(/api/contact/route.ts)" as API
+participant "In-Memory Map\n(Rate Limiter Cache)" as RateLimiter
+database "PostgreSQL Database\n(Tabel: messages)" as DB
+participant "Inbox Dashboard Admin\n(MessagesTab.tsx)" as AdminInbox
+
+User -> Client: Mengisi nama, email, subjek, & pesan
+User -> Client: Klik tombol "Kirim Pesan"
+activate Client
+
+Client -> Client: Client-side quick validation\n(Semua kolom terisi?)
+Client -> API: HTTP POST /api/contact\nContent-Type: application/json\nPayload: {name, email, subject, message, botField}
+activate API
+
+== 1. Pemeriksaan Rate Limiting (Proteksi DDoS / Spam) ==
+API -> API: Ekstrak IP Pengunjung via x-forwarded-for
+API -> RateLimiter: Cek riwayat request dari IP ini
+activate RateLimiter
+
+alt Request melebihi batas (> 4 pesan dalam 10 menit)
+    RateLimiter --> API: Status Rate Limited!
+    API --> Client: HTTP 429 Too Many Requests\n{success: false, error: "Terlalu banyak permintaan..."}
+    Client --> User: Tampilkan peringatan: "Tunggu 10 menit sebelum mengirim lagi."
+else Request masih di bawah batas (<= 4 pesan)
+    RateLimiter --> API: Lolos Rate Limit
+    deactivate RateLimiter
+
+    == 2. Pemeriksaan Honeypot Trap (Deteksi Bot Otomatis) ==
+    alt Field 'botField' terisi karakter
+        note over API: Field tersembunyi ini hanya diisi oleh script bot otomatis.\nBeri respons sukses palsu agar bot berhenti mencoba.
+        API --> Client: HTTP 200 OK\n{success: true, message: "Pesan Anda berhasil diterima."}
+        Client --> User: UI menampilkan respons normal
+    else Field 'botField' kosong (Pengunjung Manusia)
+        
+        == 3. Validasi Server-Side & Sanitasi Data ==
+        API -> API: Validasi regex format email:\n/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$/i
+        API -> API: Validasi panjang nama & pesan (tidak kosong, max 5000 karakter)
+
+        alt Validasi Gagal (Email tidak valid / Pesan kosong)
+            API --> Client: HTTP 400 Bad Request\n{success: false, error: "Alamat email tidak valid."}
+            Client --> User: Tampilkan error: "Periksa kembali format email Anda."
+        else Validasi Berhasil
+            
+            == 4. Penyimpanan ke Database ==
+            API -> DB: INSERT INTO messages (name, email, subject, message, read, created_at)\nVALUES (name, email, subject, message, false, NOW())
+            activate DB
+
+            alt Terjadi Error Koneksi Database
+                DB --> API: Database Error (Connection timeout, etc.)
+                API --> Client: HTTP 500 Internal Server Error\n{success: false, error: "Gagal menyimpan pesan ke database."}
+                Client --> User: Tampilkan toast error: "Server sibuk, coba beberapa saat lagi."
+            else Penyimpanan Berhasil
+                DB --> API: Status 201 Created\n{data: {id: "msg_xxx", ...}}
+                deactivate DB
+
+                API --> Client: HTTP 200 OK\n{success: true, message: "Pesan Anda berhasil dikirimkan!"}
+                deactivate API
+
+                Client -> Client: Trigger efek animasi Confetti
+                Client -> Client: Reset form input menjadi kosong
+                Client --> User: Notifikasi sukses hijau: "Pesan Terkirim!"
+
+                == 5. Notifikasi Realtime ke Admin ==
+                DB -->> AdminInbox: WebSocket Broadcast (Event INSERT messages)
+                AdminInbox -> AdminInbox: Update badge notifikasi pesan baru (+1)
+            end
+        end
+    end
+end
+
+deactivate Client
+@enduml
