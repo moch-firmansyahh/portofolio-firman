@@ -155,7 +155,15 @@ export async function getProjects(): Promise<Project[]> {
  */
 export async function getProjectById(id: string): Promise<Project | null> {
   const projects = await getProjects();
-  const found = projects.find((p) => String(p.id) === String(id));
+  const normalized = decodeURIComponent(id).toLowerCase().trim();
+  const found = projects.find((p) => {
+    if (String(p.id).toLowerCase() === normalized) return true;
+    const titleSlug = (p.title || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+    return titleSlug === normalized;
+  });
   return found || null;
 }
 

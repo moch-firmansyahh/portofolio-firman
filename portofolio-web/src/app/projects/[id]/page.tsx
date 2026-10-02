@@ -34,14 +34,14 @@ export default async function ProjectDetailPage({ params }: Props) {
   const { id } = await params;
   
   // Ambil data proyek secara efisien dalam 1 pemanggilan
-  const allProjects = await getProjects();
-  const project = allProjects.find((p) => p.id === id);
+  const project = await getProjectById(id);
 
   if (!project) {
     notFound();
   }
 
-  const otherProjects = allProjects.filter((p) => p.id !== id);
+  const allProjects = await getProjects();
+  const otherProjects = allProjects.filter((p) => p.id !== project.id);
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] bg-grain-texture text-[#0F172A] py-12 md:py-20 px-6 md:px-12 selection:bg-neutral-900 selection:text-white">
