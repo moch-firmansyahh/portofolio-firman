@@ -89,7 +89,7 @@ export default async function ProjectDetailPage({ params }: Props) {
                 href={project.githubUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white hover:bg-neutral-100 text-neutral-900 border border-neutral-200 font-semibold text-sm transition-colors shadow-xs"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white hover:bg-neutral-100 text-neutral-900 border border-neutral-200 font-semibold text-sm transition-all shadow-xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0"
               >
                 <GithubIcon className="w-4 h-4" />
                 <span>Source Code GitHub</span>
