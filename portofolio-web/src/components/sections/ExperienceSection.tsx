@@ -1,17 +1,21 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { MapPin } from "lucide-react";
 import { EXPERIENCES as DEFAULT_EXPERIENCES } from "@/data/portfolioData";
 import type { ExperienceItem } from "@/types/experience";
-import { getExperiences } from "@/services/portfolio";
+import { getExperiences, sortExperiences } from "@/services/portfolio";
 import { supabase } from "@/lib/supabase/client";
 import ScrollReveal from "@/components/effects/ScrollReveal";
 
 export default function ExperienceSection() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [experiences, setExperiences] = useState<ExperienceItem[]>(DEFAULT_EXPERIENCES);
+
+  const sortedExperiences = useMemo(() => {
+    return sortExperiences(experiences);
+  }, [experiences]);
 
   useEffect(() => {
     let isMounted = true;
@@ -77,7 +81,7 @@ export default function ExperienceSection() {
             className="absolute top-0 left-4 md:left-1/2 -translate-x-px w-0.5 bg-neutral-900 z-0 origin-top shadow-xs"
           />
 
-          {experiences.map((exp, index) => {
+          {sortedExperiences.map((exp, index) => {
             const isEven = index % 2 === 0;
             return (
               <div
