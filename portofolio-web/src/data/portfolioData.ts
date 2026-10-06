@@ -257,6 +257,28 @@ export const PROJECTS: Project[] = [
     ],
     year: "2026",
   },
+  {
+    id: "simgizi",
+    title: "SimGizi (Sistem Informasi Gizi Anak dan Deteksi Dini Stunting)",
+    subtitle: "Sistem Informasi Gizi Anak dan Deteksi Dini Stunting Berbasis AI",
+    description: "SimGizi adalah aplikasi web berbasis AI yang membantu petugas posyandu mendeteksi dini gizi buruk dan stunting pada balita usia 0 sampai 59 bulan. Z-score dihitung otomatis sesuai standar WHO, lalu rekomendasi tindak lanjut dihasilkan oleh Gemini AI.",
+    longDescription: "Stunting dan gizi buruk pada balita masih jadi tantangan besar di Indonesia. SimGizi hadir sebagai solusi digital untuk petugas posyandu. Petugas cukup mengisi usia, jenis kelamin, berat badan, dan tinggi badan, lalu sistem menghitung Z-score (BB/U, TB/U, BB/TB) secara otomatis dengan engine rule-based yang mengacu pada WHO Child Growth Standards dan Permenkes No. 2 Tahun 2020. Hasil klasifikasi kemudian dikirim ke Gemini API untuk menghasilkan rekomendasi edukatif.",
+    tags: ["Next.js 16", "TypeScript", "Tailwind CSS", "Gemini API", "Lucide React", "Sonner", "jsPDF", "localStorage", "Vercel"],
+    category: "Web App",
+    featured: true,
+    image: "https://cgnerlwoezzjqaqofzuy.supabase.co/storage/v1/object/public/portfolio-assets/projects/1790932817386-0jn12k.png",
+    demoUrl: "https://sim-gizi-testing-v2.vercel.app/",
+    githubUrl: "https://github.com/Central-Computer-Improvement/The-Hack-2026-2-FE",
+    metrics: "Next.js • Z-Score WHO • Gemini AI • PDF Export",
+    highlights: [
+      "Dashboard monitoring dengan 4 kartu ringkasan dan grafik distribusi status gizi balita",
+      "Peringatan dini otomatis untuk balita yang terindikasi stunting atau gizi kurang",
+      "Perhitungan Z-score otomatis (BB/U, TB/U, BB/TB) sesuai standar WHO dan Permenkes No. 2 Tahun 2020",
+      "Rekomendasi tindak lanjut berbasis Gemini AI dengan sistem fail-safe",
+      "Ekspor laporan rekap gizi ke PDF untuk pelaporan ke Puskesmas atau Dinkes",
+    ],
+    year: "2026",
+  },
 ];
 
 export const EXPERIENCES: ExperienceItem[] = [

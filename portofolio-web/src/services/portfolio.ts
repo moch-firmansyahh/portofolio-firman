@@ -10,6 +10,8 @@ import type { Skill, SkillCategory } from "@/types/skill";
 import type { PersonalInfo } from "@/types/profile";
 import type { ExperienceItem } from "@/types/experience";
 
+const BACKEND_API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+
 // Database row schemas for type-safe Supabase mapping
 interface DbProjectRow {
   id: string | number;
@@ -88,14 +90,13 @@ interface DbExperienceRow {
 
 /**
  * Wrapper Promise.race dengan timeout dan penanganan rejection yang aman.
- * Menghindari unhandled promise rejection dan memory leak timer.
  */
 function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
   let timer: ReturnType<typeof setTimeout>;
 
   const timeoutPromise = new Promise<T>((resolve) => {
     timer = setTimeout(() => {
-      console.warn(`⏳ Supabase query timed out after ${ms}ms. Using fallback data.`);
+      console.warn(`⏳ Query timed out after ${ms}ms. Using fallback data.`);
       resolve(fallback);
     }, ms);
   });
@@ -107,7 +108,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
     })
     .catch((err) => {
       clearTimeout(timer);
-      console.warn("⚠️ Supabase query failed:", err instanceof Error ? err.message : err);
+      console.warn("⚠️ Query failed:", err instanceof Error ? err.message : err);
       return fallback;
     });
 
@@ -115,39 +116,72 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
 }
 
 /**
- * Mengambil daftar proyek dari Supabase, dengan fallback ke static data
+ * Mengambil daftar proyek dari Backend REST API / Supabase, dengan fallback ke static data
  */
 export async function getProjects(): Promise<Project[]> {
   const fetchPromise = (async (): Promise<Project[]> => {
-    const { data, error } = await supabase
-      .from("projects")
-      .select("*");
-
-    if (error || !data || data.length === 0) {
-      if (error) console.warn("Supabase projects error:", error.message);
-      return STATIC_PROJECTS;
+    // 1. Coba REST API Backend terlebih dahulu (paling cepat & selalu sinkron dengan admin)
+    try {
+      const res = await fetch(`${BACKEND_API}/projects`, {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          const rows = json.data as DbProjectRow[];
+          return rows.map((d) => ({
+            id: String(d.id),
+            title: d.title || "",
+            subtitle: d.subtitle || "",
+            category: d.category || "Web App",
+            image: d.image || "/projects/manajemen-kontrakan.png",
+            description: d.description || "",
+            longDescription: d.long_description || d.longDescription || d.description || "",
+            tags: Array.isArray(d.tags) ? d.tags : [],
+            metrics: d.metrics || undefined,
+            year: String(d.year || "2026"),
+            demoUrl: d.demo_url || d.demoUrl || "#",
+            githubUrl: d.github_url || d.githubUrl || "#",
+            highlights: Array.isArray(d.highlights) ? d.highlights : [],
+            featured: Boolean(d.featured),
+          }));
+        }
+      }
+    } catch {
+      // Backend REST API offline / unreachabe, lanjut ke Supabase
     }
 
-    const rows = data as unknown as DbProjectRow[];
-    return rows.map((d) => ({
-      id: String(d.id),
-      title: d.title || "",
-      subtitle: d.subtitle || "",
-      category: d.category || "Web App",
-      image: d.image || "/projects/manajemen-kontrakan.png",
-      description: d.description || "",
-      longDescription: d.long_description || d.longDescription || d.description || "",
-      tags: Array.isArray(d.tags) ? d.tags : [],
-      metrics: d.metrics || undefined,
-      year: String(d.year || "2024"),
-      demoUrl: d.demo_url || d.demoUrl || "#",
-      githubUrl: d.github_url || d.githubUrl || "#",
-      highlights: Array.isArray(d.highlights) ? d.highlights : [],
-      featured: Boolean(d.featured),
-    }));
+    // 2. Fallback ke Supabase Cloud
+    try {
+      const { data, error } = await supabase.from("projects").select("*");
+      if (!error && data && data.length > 0) {
+        const rows = data as unknown as DbProjectRow[];
+        return rows.map((d) => ({
+          id: String(d.id),
+          title: d.title || "",
+          subtitle: d.subtitle || "",
+          category: d.category || "Web App",
+          image: d.image || "/projects/manajemen-kontrakan.png",
+          description: d.description || "",
+          longDescription: d.long_description || d.longDescription || d.description || "",
+          tags: Array.isArray(d.tags) ? d.tags : [],
+          metrics: d.metrics || undefined,
+          year: String(d.year || "2026"),
+          demoUrl: d.demo_url || d.demoUrl || "#",
+          githubUrl: d.github_url || d.githubUrl || "#",
+          highlights: Array.isArray(d.highlights) ? d.highlights : [],
+          featured: Boolean(d.featured),
+        }));
+      }
+    } catch {
+      // Supabase error
+    }
+
+    return STATIC_PROJECTS;
   })();
 
-  return withTimeout(fetchPromise, 3500, STATIC_PROJECTS);
+  return withTimeout(fetchPromise, 6000, STATIC_PROJECTS);
 }
 
 /**
@@ -168,22 +202,45 @@ export async function getProjectById(id: string): Promise<Project | null> {
 }
 
 /**
- * Mengambil daftar kategori keahlian dari Supabase
+ * Mengambil daftar kategori keahlian dari REST API / Supabase
  */
 export async function getSkillCategories(): Promise<SkillCategory[]> {
   const fetchPromise = (async (): Promise<SkillCategory[]> => {
-    const { data, error } = await supabase
-      .from("skills")
-      .select("*");
+    let rows: DbSkillRow[] = [];
 
-    if (error || !data || data.length === 0) {
-      if (error) console.warn("Supabase skills error:", error.message);
+    // 1. Coba REST API Backend
+    try {
+      const res = await fetch(`${BACKEND_API}/skills`, {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          rows = json.data as DbSkillRow[];
+        }
+      }
+    } catch {
+      // Backend offline
+    }
+
+    // 2. Fallback ke Supabase
+    if (rows.length === 0) {
+      try {
+        const { data, error } = await supabase.from("skills").select("*");
+        if (!error && data && data.length > 0) {
+          rows = data as unknown as DbSkillRow[];
+        }
+      } catch {
+        // Supabase error
+      }
+    }
+
+    if (rows.length === 0) {
       return STATIC_SKILL_CATEGORIES;
     }
 
-    const rows = data as unknown as DbSkillRow[];
     const categoryMap = new Map<string, Skill[]>();
-
     rows.forEach((row) => {
       const cat = row.category || "Technical Skills";
       if (!categoryMap.has(cat)) {
@@ -203,7 +260,6 @@ export async function getSkillCategories(): Promise<SkillCategory[]> {
       });
     });
 
-    // Urutan standar agar tab utama tetap rapi di awal, diikuti kategori baru dari admin
     const predefinedOrder = [
       "Front-End Web Development",
       "Programming Languages",
@@ -220,7 +276,6 @@ export async function getSkillCategories(): Promise<SkillCategory[]> {
       }
     });
 
-    // Kategori kustom baru yang ditambahkan dari admin (seperti "Backend")
     categoryMap.forEach((skills, title) => {
       result.push({ title, skills });
     });
@@ -228,26 +283,52 @@ export async function getSkillCategories(): Promise<SkillCategory[]> {
     return result.length > 0 ? result : STATIC_SKILL_CATEGORIES;
   })();
 
-  return withTimeout(fetchPromise, 3500, STATIC_SKILL_CATEGORIES);
+  return withTimeout(fetchPromise, 6000, STATIC_SKILL_CATEGORIES);
 }
 
 /**
- * Mengambil data profil dari Supabase
+ * Mengambil data profil dari REST API / Supabase
  */
 export async function getProfile(): Promise<PersonalInfo> {
   const fetchPromise = (async (): Promise<PersonalInfo> => {
-    const { data, error } = await supabase
-      .from("profile")
-      .select("*")
-      .limit(1)
-      .maybeSingle();
+    let row: DbProfileRow | null = null;
 
-    if (error || !data) {
-      if (error) console.warn("Supabase profile error:", error.message);
+    // 1. Coba REST API Backend
+    try {
+      const res = await fetch(`${BACKEND_API}/profile`, {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          row = json.data as DbProfileRow;
+        }
+      }
+    } catch {
+      // Backend offline
+    }
+
+    // 2. Fallback ke Supabase
+    if (!row) {
+      try {
+        const { data, error } = await supabase
+          .from("profile")
+          .select("*")
+          .limit(1)
+          .maybeSingle();
+        if (!error && data) {
+          row = data as unknown as DbProfileRow;
+        }
+      } catch {
+        // Supabase error
+      }
+    }
+
+    if (!row) {
       return STATIC_PERSONAL_INFO;
     }
 
-    const row = data as unknown as DbProfileRow;
     const social = row.social_links || row.socialLinks || {};
 
     return {
@@ -275,7 +356,7 @@ export async function getProfile(): Promise<PersonalInfo> {
     };
   })();
 
-  return withTimeout(fetchPromise, 3500, STATIC_PERSONAL_INFO);
+  return withTimeout(fetchPromise, 6000, STATIC_PERSONAL_INFO);
 }
 
 const MONTH_NAMES_MAP: Record<string, number> = {
@@ -336,20 +417,44 @@ export function sortExperiences<T extends { period?: string }>(items: T[]): T[] 
 }
 
 /**
- * Mengambil daftar riwayat pendidikan & pengalaman dari Supabase
+ * Mengambil daftar riwayat pendidikan & pengalaman dari REST API / Supabase
  */
 export async function getExperiences(): Promise<ExperienceItem[]> {
   const fetchPromise = (async (): Promise<ExperienceItem[]> => {
-    const { data, error } = await supabase
-      .from("experiences")
-      .select("*");
+    let rows: DbExperienceRow[] = [];
 
-    if (error || !data || data.length === 0) {
-      if (error) console.warn("Supabase experiences error:", error.message);
+    // 1. Coba REST API Backend
+    try {
+      const res = await fetch(`${BACKEND_API}/experiences`, {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          rows = json.data as DbExperienceRow[];
+        }
+      }
+    } catch {
+      // Backend offline
+    }
+
+    // 2. Fallback ke Supabase
+    if (rows.length === 0) {
+      try {
+        const { data, error } = await supabase.from("experiences").select("*");
+        if (!error && data && data.length > 0) {
+          rows = data as unknown as DbExperienceRow[];
+        }
+      } catch {
+        // Supabase error
+      }
+    }
+
+    if (rows.length === 0) {
       return sortExperiences(STATIC_EXPERIENCES);
     }
 
-    const rows = data as unknown as DbExperienceRow[];
     const mapped = rows.map((row) => ({
       id: row.id ? String(row.id) : undefined,
       period: row.period || "",
@@ -363,5 +468,5 @@ export async function getExperiences(): Promise<ExperienceItem[]> {
     return sortExperiences(mapped);
   })();
 
-  return withTimeout(fetchPromise, 3500, sortExperiences(STATIC_EXPERIENCES));
+  return withTimeout(fetchPromise, 6000, sortExperiences(STATIC_EXPERIENCES));
 }
