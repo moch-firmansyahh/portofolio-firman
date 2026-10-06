@@ -6,9 +6,9 @@ import { GithubIcon } from "@/components/ui/icons";
 import { getProjectById, getProjects } from "@/services/portfolio";
 import type { Metadata } from "next";
 
-export const dynamic = "force-dynamic";
+export const dynamic = "auto";
 export const dynamicParams = true;
-export const revalidate = 0;
+export const revalidate = 60;
 
 interface Props {
   params: Promise<{ id: string }>;

@@ -12,7 +12,14 @@ import type { ExperienceItem } from "@/types/experience";
 
 const BACKEND_API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
-// Database row schemas for type-safe Supabase mapping
+// In-memory cache agar perpindahan halaman dan re-render INSTAN (0ms), tidak freeze/loading lama!
+let cacheProjects: { data: Project[]; timestamp: number } | null = null;
+let cacheSkills: { data: SkillCategory[]; timestamp: number } | null = null;
+let cacheProfile: { data: PersonalInfo; timestamp: number } | null = null;
+let cacheExperiences: { data: ExperienceItem[]; timestamp: number } | null = null;
+
+const CACHE_TTL_MS = 60 * 1000; // 60 detik cache di memory
+
 interface DbProjectRow {
   id: string | number;
   title?: string;
@@ -88,15 +95,11 @@ interface DbExperienceRow {
   technologies?: string[] | null;
 }
 
-/**
- * Wrapper Promise.race dengan timeout dan penanganan rejection yang aman.
- */
 function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
   let timer: ReturnType<typeof setTimeout>;
 
   const timeoutPromise = new Promise<T>((resolve) => {
     timer = setTimeout(() => {
-      console.warn(`⏳ Query timed out after ${ms}ms. Using fallback data.`);
       resolve(fallback);
     }, ms);
   });
@@ -106,9 +109,8 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
       clearTimeout(timer);
       return res;
     })
-    .catch((err) => {
+    .catch(() => {
       clearTimeout(timer);
-      console.warn("⚠️ Query failed:", err instanceof Error ? err.message : err);
       return fallback;
     });
 
@@ -116,21 +118,31 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
 }
 
 /**
- * Mengambil daftar proyek dari Backend REST API / Supabase, dengan fallback ke static data
+ * Mengambil daftar proyek dengan in-memory cache instan
  */
 export async function getProjects(): Promise<Project[]> {
+  // 1. Cek memory cache: jika masih valid, kembalikan INSTAN (0ms)
+  if (cacheProjects && Date.now() - cacheProjects.timestamp < CACHE_TTL_MS) {
+    return cacheProjects.data;
+  }
+
   const fetchPromise = (async (): Promise<Project[]> => {
-    // 1. Coba REST API Backend terlebih dahulu (paling cepat & selalu sinkron dengan admin)
+    // A. Coba REST API Backend
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
       const res = await fetch(`${BACKEND_API}/projects`, {
         cache: "no-store",
         headers: { Accept: "application/json" },
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
+
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {
           const rows = json.data as DbProjectRow[];
-          return rows.map((d) => ({
+          const result = rows.map((d) => ({
             id: String(d.id),
             title: d.title || "",
             subtitle: d.subtitle || "",
@@ -146,18 +158,20 @@ export async function getProjects(): Promise<Project[]> {
             highlights: Array.isArray(d.highlights) ? d.highlights : [],
             featured: Boolean(d.featured),
           }));
+          cacheProjects = { data: result, timestamp: Date.now() };
+          return result;
         }
       }
     } catch {
-      // Backend REST API offline / unreachabe, lanjut ke Supabase
+      // Backend offline atau timeout
     }
 
-    // 2. Fallback ke Supabase Cloud
+    // B. Fallback ke Supabase Cloud
     try {
       const { data, error } = await supabase.from("projects").select("*");
       if (!error && data && data.length > 0) {
         const rows = data as unknown as DbProjectRow[];
-        return rows.map((d) => ({
+        const result = rows.map((d) => ({
           id: String(d.id),
           title: d.title || "",
           subtitle: d.subtitle || "",
@@ -173,6 +187,8 @@ export async function getProjects(): Promise<Project[]> {
           highlights: Array.isArray(d.highlights) ? d.highlights : [],
           featured: Boolean(d.featured),
         }));
+        cacheProjects = { data: result, timestamp: Date.now() };
+        return result;
       }
     } catch {
       // Supabase error
@@ -181,7 +197,8 @@ export async function getProjects(): Promise<Project[]> {
     return STATIC_PROJECTS;
   })();
 
-  return withTimeout(fetchPromise, 6000, STATIC_PROJECTS);
+  const fallback = cacheProjects ? cacheProjects.data : STATIC_PROJECTS;
+  return withTimeout(fetchPromise, 2500, fallback);
 }
 
 /**
@@ -202,18 +219,26 @@ export async function getProjectById(id: string): Promise<Project | null> {
 }
 
 /**
- * Mengambil daftar kategori keahlian dari REST API / Supabase
+ * Mengambil daftar kategori keahlian
  */
 export async function getSkillCategories(): Promise<SkillCategory[]> {
+  if (cacheSkills && Date.now() - cacheSkills.timestamp < CACHE_TTL_MS) {
+    return cacheSkills.data;
+  }
+
   const fetchPromise = (async (): Promise<SkillCategory[]> => {
     let rows: DbSkillRow[] = [];
 
-    // 1. Coba REST API Backend
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
       const res = await fetch(`${BACKEND_API}/skills`, {
         cache: "no-store",
         headers: { Accept: "application/json" },
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
+
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {
@@ -224,7 +249,6 @@ export async function getSkillCategories(): Promise<SkillCategory[]> {
       // Backend offline
     }
 
-    // 2. Fallback ke Supabase
     if (rows.length === 0) {
       try {
         const { data, error } = await supabase.from("skills").select("*");
@@ -280,25 +304,36 @@ export async function getSkillCategories(): Promise<SkillCategory[]> {
       result.push({ title, skills });
     });
 
-    return result.length > 0 ? result : STATIC_SKILL_CATEGORIES;
+    const finalResult = result.length > 0 ? result : STATIC_SKILL_CATEGORIES;
+    cacheSkills = { data: finalResult, timestamp: Date.now() };
+    return finalResult;
   })();
 
-  return withTimeout(fetchPromise, 6000, STATIC_SKILL_CATEGORIES);
+  const fallback = cacheSkills ? cacheSkills.data : STATIC_SKILL_CATEGORIES;
+  return withTimeout(fetchPromise, 2500, fallback);
 }
 
 /**
- * Mengambil data profil dari REST API / Supabase
+ * Mengambil data profil
  */
 export async function getProfile(): Promise<PersonalInfo> {
+  if (cacheProfile && Date.now() - cacheProfile.timestamp < CACHE_TTL_MS) {
+    return cacheProfile.data;
+  }
+
   const fetchPromise = (async (): Promise<PersonalInfo> => {
     let row: DbProfileRow | null = null;
 
-    // 1. Coba REST API Backend
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
       const res = await fetch(`${BACKEND_API}/profile`, {
         cache: "no-store",
         headers: { Accept: "application/json" },
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
+
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
@@ -309,7 +344,6 @@ export async function getProfile(): Promise<PersonalInfo> {
       // Backend offline
     }
 
-    // 2. Fallback ke Supabase
     if (!row) {
       try {
         const { data, error } = await supabase
@@ -330,8 +364,7 @@ export async function getProfile(): Promise<PersonalInfo> {
     }
 
     const social = row.social_links || row.socialLinks || {};
-
-    return {
+    const result: PersonalInfo = {
       name: row.name || STATIC_PERSONAL_INFO.name,
       shortName: row.shortName || STATIC_PERSONAL_INFO.shortName,
       role: row.role || row.headline || STATIC_PERSONAL_INFO.role,
@@ -354,9 +387,13 @@ export async function getProfile(): Promise<PersonalInfo> {
       },
       stats: STATIC_PERSONAL_INFO.stats,
     };
+
+    cacheProfile = { data: result, timestamp: Date.now() };
+    return result;
   })();
 
-  return withTimeout(fetchPromise, 6000, STATIC_PERSONAL_INFO);
+  const fallback = cacheProfile ? cacheProfile.data : STATIC_PERSONAL_INFO;
+  return withTimeout(fetchPromise, 2500, fallback);
 }
 
 const MONTH_NAMES_MAP: Record<string, number> = {
@@ -417,18 +454,26 @@ export function sortExperiences<T extends { period?: string }>(items: T[]): T[] 
 }
 
 /**
- * Mengambil daftar riwayat pendidikan & pengalaman dari REST API / Supabase
+ * Mengambil daftar riwayat pendidikan & pengalaman
  */
 export async function getExperiences(): Promise<ExperienceItem[]> {
+  if (cacheExperiences && Date.now() - cacheExperiences.timestamp < CACHE_TTL_MS) {
+    return cacheExperiences.data;
+  }
+
   const fetchPromise = (async (): Promise<ExperienceItem[]> => {
     let rows: DbExperienceRow[] = [];
 
-    // 1. Coba REST API Backend
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
       const res = await fetch(`${BACKEND_API}/experiences`, {
         cache: "no-store",
         headers: { Accept: "application/json" },
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
+
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {
@@ -439,7 +484,6 @@ export async function getExperiences(): Promise<ExperienceItem[]> {
       // Backend offline
     }
 
-    // 2. Fallback ke Supabase
     if (rows.length === 0) {
       try {
         const { data, error } = await supabase.from("experiences").select("*");
@@ -465,8 +509,11 @@ export async function getExperiences(): Promise<ExperienceItem[]> {
       technologies: Array.isArray(row.technologies) ? row.technologies : [],
     }));
 
-    return sortExperiences(mapped);
+    const finalResult = sortExperiences(mapped);
+    cacheExperiences = { data: finalResult, timestamp: Date.now() };
+    return finalResult;
   })();
 
-  return withTimeout(fetchPromise, 6000, sortExperiences(STATIC_EXPERIENCES));
+  const fallback = cacheExperiences ? cacheExperiences.data : sortExperiences(STATIC_EXPERIENCES);
+  return withTimeout(fetchPromise, 2500, fallback);
 }
