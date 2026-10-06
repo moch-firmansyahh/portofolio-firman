@@ -15,6 +15,16 @@
       "key": "admin_password",
       "value": "firman2026",
       "type": "string"
+    },
+    {
+      "key": "webBaseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "adminBaseUrl",
+      "value": "http://localhost:3001",
+      "type": "string"
     }
   ],
   "item": [
@@ -28,8 +38,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/health",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "health"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
             },
             "description": "Mengecek apakah server backend Express.js aktif dan berjalan normal."
           },
@@ -56,8 +71,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
             },
             "description": "Verifikasi password admin dan generate session token."
           },
@@ -75,8 +96,14 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/auth/session",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "session"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "session"
+              ]
             },
             "description": "Mengecek apakah sesi admin masih valid."
           },
@@ -89,8 +116,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/auth/logout",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "logout"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
             },
             "description": "Mengakhiri sesi login admin."
           },
@@ -108,8 +141,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/profile",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "profile"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile"
+              ]
             },
             "description": "Mengambil data profil lengkap untuk tampilan Hero & About."
           },
@@ -131,8 +169,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/profile",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "profile"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile"
+              ]
             },
             "description": "Memperbarui profil admin dengan whitelist sanitization otomatis."
           },
@@ -153,8 +196,13 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/api/projects",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "projects"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "projects"
+                  ]
                 },
                 "description": "Mengambil semua daftar proyek portofolio."
               },
@@ -167,8 +215,14 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/api/projects/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "projects", ":id"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "projects",
+                    ":id"
+                  ],
                   "variable": [
                     {
                       "key": "id",
@@ -196,8 +250,13 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/projects",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "projects"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "projects"
+                  ]
                 },
                 "description": "Menambahkan proyek baru ke database (sekaligus menginisialisasi studi kasus bawaan)."
               },
@@ -219,8 +278,14 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/projects/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "projects", ":id"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "projects",
+                    ":id"
+                  ],
                   "variable": [
                     {
                       "key": "id",
@@ -239,8 +304,14 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/api/projects/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "projects", ":id"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "projects",
+                    ":id"
+                  ],
                   "variable": [
                     {
                       "key": "id",
@@ -264,8 +335,15 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/api/projects/:id/case-study",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "projects", ":id", "case-study"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "projects",
+                    ":id",
+                    "case-study"
+                  ],
                   "variable": [
                     {
                       "key": "id",
@@ -293,8 +371,15 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/projects/:id/case-study",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "projects", ":id", "case-study"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "projects",
+                    ":id",
+                    "case-study"
+                  ],
                   "variable": [
                     {
                       "key": "id",
@@ -322,8 +407,15 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/projects/:id/case-study",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "projects", ":id", "case-study"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "projects",
+                    ":id",
+                    "case-study"
+                  ],
                   "variable": [
                     {
                       "key": "id",
@@ -352,8 +444,13 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/api/skills",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "skills"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "skills"
+                  ]
                 },
                 "description": "Mengambil seluruh daftar keahlian/skill."
               },
@@ -375,8 +472,13 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/skills",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "skills"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "skills"
+                  ]
                 },
                 "description": "Menambahkan keahlian baru ke tabel skills."
               },
@@ -398,8 +500,14 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/skills/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "skills", ":id"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "skills",
+                    ":id"
+                  ],
                   "variable": [
                     {
                       "key": "id",
@@ -418,8 +526,14 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/api/skills/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "skills", ":id"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "skills",
+                    ":id"
+                  ],
                   "variable": [
                     {
                       "key": "id",
@@ -452,8 +566,14 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/skills/category",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "skills", "category"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "skills",
+                    "category"
+                  ]
                 },
                 "description": "Membuat kategori baru sekaligus mengisinya dengan beberapa keahlian awal."
               },
@@ -466,8 +586,15 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/api/skills/category/:category",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "skills", "category", ":category"],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "skills",
+                    "category",
+                    ":category"
+                  ],
                   "variable": [
                     {
                       "key": "category",
@@ -493,8 +620,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/experiences",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "experiences"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "experiences"
+              ]
             },
             "description": "Mengambil semua riwayat pendidikan dan pengalaman kerja."
           },
@@ -516,8 +648,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/experiences",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "experiences"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "experiences"
+              ]
             },
             "description": "Menambahkan riwayat karir atau pendidikan baru."
           },
@@ -539,8 +676,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/experiences/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "experiences", ":id"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "experiences",
+                ":id"
+              ],
               "variable": [
                 {
                   "key": "id",
@@ -559,8 +702,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/experiences/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "experiences", ":id"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "experiences",
+                ":id"
+              ],
               "variable": [
                 {
                   "key": "id",
@@ -578,14 +727,47 @@
       "name": "7. Pesan Kontak",
       "item": [
         {
+          "name": "CREATE - Kirim Formulir Kontak Publik (Web)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Budi Santoso\",\n  \"email\": \"budi@example.com\",\n  \"subject\": \"Penawaran Kolaborasi Proyek\",\n  \"message\": \"Halo Firman, saya tertarik dengan arsitektur web portofolio Anda...\",\n  \"botField\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{webBaseUrl}}/api/contact",
+              "host": [
+                "{{webBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "contact"
+              ]
+            },
+            "description": "Endpoint publik pengiriman pesan form kontak di portofolio-web. Dilengkapi proteksi Rate Limit (4 pesan / 10 menit / IP) dan Honeypot Trap (botField harus kosong)."
+          },
+          "response": []
+        },
+        {
           "name": "READ - Get All Messages",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/messages",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "messages"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages"
+              ]
             },
             "description": "Mengambil semua daftar pesan masuk dari pengunjung web."
           },
@@ -607,8 +789,15 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/messages/:id/read",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "messages", ":id", "read"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages",
+                ":id",
+                "read"
+              ],
               "variable": [
                 {
                   "key": "id",
@@ -627,8 +816,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/messages/:id",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "messages", ":id"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages",
+                ":id"
+              ],
               "variable": [
                 {
                   "key": "id",
@@ -637,6 +832,41 @@
               ]
             },
             "description": "Menghapus pesan dari database."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "8. Unggah Berkas & Media (Upload)",
+      "item": [
+        {
+          "name": "POST - Upload Gambar Proyek / Sertifikat",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "",
+                  "description": "Pilih file gambar (PNG, JPG, WebP, SVG maksimal 10MB)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{adminBaseUrl}}/api/upload",
+              "host": [
+                "{{adminBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "upload"
+              ]
+            },
+            "description": "Mengunggah file gambar ke Supabase Storage (bucket portfolio-assets atau projects) dengan autentikasi Service Role dan mengembalikan URL CDN publik."
           },
           "response": []
         }

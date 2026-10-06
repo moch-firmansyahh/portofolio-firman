@@ -1,0 +1,89 @@
+@startuml 03_alur_crud_proyek_dan_studi_kasus
+skinparam backgroundColor #FFFFFF
+skinparam handwritten false
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam BoxPadding 15
+skinparam ParticipantPadding 15
+skinparam SequenceLifeLineBorderColor #333333
+skinparam SequenceLifeLineBackgroundColor #F8F9FA
+skinparam ArrowColor #222222
+skinparam NoteBorderColor #CCCCCC
+skinparam NoteBackgroundColor #FFFFE0
+
+title Diagram Alur REST API: Manajemen Proyek & Detail Studi Kasus
+
+actor "Firman (Admin)" as Admin
+participant "ProjectsTab.tsx\n(Tabel Proyek Admin)" as ProjectsTab
+participant "CaseStudyModal.tsx\n(Modal Pratinjau)" as CaseStudyModal
+participant "ProjectModal.tsx\n(Form Edit Proyek)" as ProjectModal
+participant "Upload API\n(/api/upload)" as UploadAPI
+participant "Express REST API\n(Port 5000 /api/projects)" as BackendAPI
+database "PostgreSQL Database\n(Tabel: projects)" as DB
+participant "Halaman Web Detail\n(/projects/[id]/page.tsx)" as WebDetailPage
+
+== 1. Meninjau & Pratinjau Studi Kasus Proyek ==
+Admin -> ProjectsTab: Buka menu "Proyek & Portofolio"
+activate ProjectsTab
+ProjectsTab -> Admin: Menampilkan tabel proyek + badge "Detail Studi Kasus (X Poin)"
+
+Admin -> ProjectsTab: Klik tombol "Detail Studi Kasus" pada baris proyek
+ProjectsTab -> CaseStudyModal: Buka modal pratinjau (props: project)
+activate CaseStudyModal
+CaseStudyModal -> Admin: Menampilkan Pratinjau:\n- Latar Belakang & Solusi (longDescription)\n- Kemampuan Sistem (highlights checklist)\n- Tech Stack (tags) & Key Metrics
+deactivate CaseStudyModal
+
+== 2. Mengedit Konten Proyek & Mengunggah Gambar ==
+Admin -> CaseStudyModal: Klik tombol "Edit Detail Studi Kasus"
+activate CaseStudyModal
+CaseStudyModal -> ProjectModal: openEditCaseStudy(project)\n(Aktifkan Tab: Detail Studi Kasus)
+deactivate CaseStudyModal
+activate ProjectModal
+
+opt Admin Mengganti Screenshot Proyek
+    Admin -> ProjectModal: Pilih file gambar baru (PNG/JPG max 10MB)
+    ProjectModal -> UploadAPI: POST /api/upload (FormData: file)
+    activate UploadAPI
+    UploadAPI -> UploadAPI: Validasi tipe file & upload ke Supabase Storage
+    UploadAPI --> ProjectModal: Return URL publik CDN gambar
+    deactivate UploadAPI
+end
+
+Admin -> ProjectModal: Ubah Latar Belakang & Solusi (longDescription)
+Admin -> ProjectModal: Tambah / hapus butir Kemampuan Sistem (highlights)
+ProjectModal -> ProjectModal: Live Checklist Preview ter-update otomatis
+Admin -> ProjectModal: Perbarui Key Metrics & Tags teknologi
+Admin -> ProjectModal: Klik tombol "Simpan Proyek"
+
+== 3. Pengiriman REST API & Persistensi Data ==
+ProjectModal -> BackendAPI: PUT /api/projects/:id/case-study\nPayload: {longDescription, highlights, metrics, tags, subtitle}
+activate BackendAPI
+note over BackendAPI: Sanitasi parameter:\n- Validasi array highlights & tags\n- Update timestamp updatedAt
+
+BackendAPI -> DB: UPDATE projects SET longDescription = ..., highlights = ... WHERE id = :id
+activate DB
+DB --> BackendAPI: Status 200 OK\n(Row updated successfully)
+deactivate DB
+
+BackendAPI --> ProjectModal: Response JSON {success: true, message: "Detail studi kasus berhasil diperbarui."}
+deactivate BackendAPI
+
+ProjectModal --> Admin: Toast sukses & tutup modal
+deactivate ProjectModal
+
+== 4. Pengunjung Mengakses Halaman Studi Kasus di Web ==
+actor "Pengunjung Web" as Visitor
+Visitor -> WebDetailPage: Akses URL /projects/voluntrip (atau /projects/:uuid)
+activate WebDetailPage
+WebDetailPage -> DB: getProjects() -> Query tabel projects
+activate DB
+DB --> WebDetailPage: Return data proyek lengkap
+deactivate DB
+
+note over WebDetailPage: Resolusi ID Ganda:\n1. Coba cocokkan String(p.id) === id\n2. Coba cocokkan slug judul: title.toLowerCase().replace(/\\s+/g, '-') === id
+WebDetailPage --> Visitor: Render halaman studi kasus lengkap dengan Highlights, Key Metrics, & Gambar resolusi tinggi
+deactivate WebDetailPage
+
+@enduml

@@ -1,199 +1,160 @@
 # 📘 Dokumentasi Arsitektur REST API & Sequence Diagram
 
-Folder ini berisi dokumentasi resmi dan diagram urutan (**PlantUML Sequence Diagram**) yang mendokumentasikan seluruh alur kerja REST API, komunikasi antarmuka, proteksi keamanan, dan sinkronisasi data pada ekosistem web portofolio.
+Folder ini berisi arsitektur resmi **REST API**, berkas diagram urutan (**PlantUML Sequence Diagram**), render visual gambar diagram, serta koleksi **Postman API v2.1** yang siap diimpor untuk pengujian seluruh endpoint pada ekosistem web portofolio.
 
 ---
 
 ## 📂 Struktur Berkas dalam Folder `restapi/`
 
+Folder ini telah dirapikan secara modular menjadi beberapa subdirektori fungsional:
+
 ```
 restapi/
-├── DOKUMENTASI_REST_API.md                   <-- Dokumentasi Arsitektur Lengkap
-├── README.md                                 <-- Panduan Cepat & Indeks Berkas
-├── Portfolio_Backend_API.postman_collection.json <-- Koleksi Postman Siap Pakai (1-Click Import)
-├── 01_arsitektur_global_dan_aliran_data.puml <-- Sequence Diagram Arsitektur & Interaksi Global
-├── arsitektur_global_dan_aliran_data.png     <-- Gambar Visual Render Diagram 01
-├── 02_alur_pengiriman_pesan_kontak.puml      <-- Sequence Diagram Pengiriman Form Kontak (/api/contact)
-├── alur_pengiriman_pesan_kontak.png          <-- Gambar Visual Render Diagram 02
-├── 03_alur_crud_proyek_dan_studi_kasus.puml  <-- Sequence Diagram CRUD Proyek & Detail Studi Kasus
-├── alur_crud_proyek_dan_studi_kasus.png      <-- Gambar Visual Render Diagram 03
-├── 04_alur_sinkronisasi_realtime_web.puml    <-- Sequence Diagram Sinkronisasi Realtime (Tanpa Refresh)
-├── alur_sinkronisasi_realtime_web.png        <-- Gambar Visual Render Diagram 04
-├── 05_alur_sinkronisasi_github_api.puml      <-- Sequence Diagram Integrasi GitHub REST API v3
-└── alur_sinkronisasi_github_api.png          <-- Gambar Visual Render Diagram 05
+├── README.md                                          <-- Panduan Cepat & Navigasi Utama Ini
+├── docs/                                              <-- Spesifikasi Teknis & Dokumentasi Lengkap
+│   └── DOKUMENTASI_REST_API.md                        <-- Detail Komprehensif Arsitektur & Payload
+├── postman/                                           <-- Koleksi Postman Siap Pakai
+│   └── Portfolio_Backend_API.postman_collection.json  <-- 1-Click Import ke Aplikasi Postman
+├── diagrams/                                          <-- Diagram Alur & Urutan Sistem
+│   ├── puml/                                          <-- Source Code PlantUML (.puml)
+│   │   ├── 01_arsitektur_global_dan_aliran_data.puml
+│   │   ├── 02_alur_pengiriman_pesan_kontak.puml
+│   │   ├── 03_alur_crud_proyek_dan_studi_kasus.puml
+│   │   ├── 04_alur_sinkronisasi_realtime_web.puml
+│   │   ├── 05_alur_sinkronisasi_github_api.puml
+│   │   └── 06_alur_kerja_cms_portofolio_admin.puml
+│   └── images/                                        <-- Gambar Visual Render Diagram (.png)
+│       ├── 01_arsitektur_global_dan_aliran_data.png
+│       ├── 02_alur_pengiriman_pesan_kontak.png
+│       ├── 03_alur_crud_proyek_dan_studi_kasus.png
+│       ├── 04_alur_sinkronisasi_realtime_web.png
+│       ├── 05_alur_sinkronisasi_github_api.png
+│       └── 06_alur_kerja_cms_portofolio_admin.png
+└── env-templates/                                     <-- Contoh Konfigurasi Environment Vercel
+    ├── vercel-management-porto.env
+    └── vercel-portofolio-web.env
 ```
 
 ---
 
-## 🗺️ 1. Peta Seluruh Folder & Endpoint REST API
+## 🚀 1. Cara Menggunakan Koleksi Postman (1-Click Import)
 
-Sistem REST API dibagi menjadi 3 pilar utama:
+Berkas koleksi Postman berada di:
+[`postman/Portfolio_Backend_API.postman_collection.json`](./postman/Portfolio_Backend_API.postman_collection.json)
 
-```
-portofolio-firman-fix/
-├── portofolio-web/
-│   └── src/
-│       ├── app/api/                     <-- [REST API Internal Web]
-│       │   └── contact/route.ts         <-- POST /api/contact (Pesan Masuk)
-│       └── services/                    <-- [Consumer Data Web]
-│           ├── contact.ts               <-- Mengirim form ke /api/contact
-│           └── portfolio.ts             <-- Fetch data proyek, profil, skill, dll.
-│
-├── portofolio-admin/
-│   └── frontend/
-│       └── src/
-│           ├── app/api/                 <-- [REST API Serverless Admin]
-│           │   ├── auth/login/route.ts  <-- POST: Login Admin (Set Cookie)
-│           │   ├── auth/logout/route.ts <-- POST: Logout Admin (Clear Cookie)
-│           │   ├── auth/session/route.ts<-- GET: Cek status sesi login
-│           │   ├── skills/route.ts      <-- GET, POST: Manajemen Skill
-│           │   ├── skills/[id]/route.ts <-- PUT, DELETE: Operasi Skill per ID
-│           │   ├── projects/route.ts    <-- GET, POST: Manajemen Proyek
-│           │   ├── projects/[id]/route.ts<-- PUT, DELETE: Operasi Proyek per ID
-│           │   ├── experiences/route.ts <-- GET, POST: Manajemen Pengalaman
-│           │   ├── experiences/[id]/route.ts<-- PUT, DELETE: Pengalaman per ID
-│           │   ├── messages/route.ts    <-- GET: Daftar Pesan Masuk
-│           │   ├── messages/[id]/route.ts<-- PATCH, DELETE: Status Baca & Hapus
-│           │   └── profile/route.ts     <-- GET, PUT: Profil & Narasi Hero/About
-│           └── lib/api/                 <-- [Client API & External Integrator]
-│               ├── github.ts            <-- Konsumen GitHub REST API v3
-│               ├── projects.ts          <-- Handler CRUD Proyek & Studi Kasus
-│               ├── skills.ts            <-- Handler CRUD Keahlian
-│               ├── experiences.ts       <-- Handler CRUD Pengalaman
-│               ├── messages.ts          <-- Handler Pesan Pengunjung
-│               └── profile.ts           <-- Handler Pengaturan Profil
-│
-└── restapi/                             <-- [Dokumentasi & PlantUML Diagram]
-```
+1. Buka aplikasi **Postman**.
+2. Klik tombol **Import** di kiri atas.
+3. Tarik (*drag and drop*) berkas `Portfolio_Backend_API.postman_collection.json`.
+4. Koleksi akan otomatis terimpor lengkap dengan **26 request endpoint**, variabel environment, contoh payload, dan dokumentasi per request.
+
+### Variabel Environment Bawaan Postman:
+| Variabel | Nilai Default | Keterangan |
+| :--- | :--- | :--- |
+| `baseUrl` | `http://localhost:5000` | Port server backend Express.js |
+| `webBaseUrl` | `http://localhost:3000` | Port web publik Next.js (`portofolio-web`) |
+| `adminBaseUrl` | `http://localhost:3001` | Port admin CMS Next.js (`portofolio-admin`) |
+| `admin_password` | `firman2026` | Password autentikasi default admin |
 
 ---
 
-## 🌐 2. Spesifikasi Lengkap Endpoint REST API
+## 🗺️ 2. Peta Endpoint REST API
 
-### 1. `POST /api/contact` (Di `portofolio-web`)
-* **File**: `portofolio-web/src/app/api/contact/route.ts`
-* **Fungsi**: Menerima pesan dari formulir kontak publik, menyaring spam/bot, melakukan validasi email & panjang pesan, lalu menyimpannya ke database.
-* **Keamanan**:
-  1. **Rate Limiting**: Maksimal **4 pesan per 10 menit per IP address**. Request ke-5 akan diblokir dengan kode HTTP `429 Too Many Requests`.
-  2. **Honeypot Trap**: Memeriksa input tersembunyi `botField`. Jika terisi (diisi oleh skrip bot otomatis), server langsung mengembalikan `200 OK` palsu agar bot tertipu tanpa mencemari database.
-  3. **Regex Email Validation**: Menguji format email valid dengan ekspresi reguler berstandar RFC.
+### A. Server Backend Express.js (`http://localhost:5000/api`)
+* **Kesehatan Server**: `GET /api/health`
+* **Autentikasi**:
+  - `POST /api/auth/login` (Login dengan bcrypt hash)
+  - `GET /api/auth/session` (Verifikasi session token)
+  - `POST /api/auth/logout` (Logout admin)
+* **Profil**:
+  - `GET /api/profile` (Data profil lengkap)
+  - `PUT /api/profile` (Pembaruan data tersanitasi)
+* **Manajemen Proyek**:
+  - `GET /api/projects` (Daftar semua proyek)
+  - `GET /api/projects/:id` (Detail proyek spesifik)
+  - `POST /api/projects` (Tambah proyek baru)
+  - `PUT /api/projects/:id` (Perbarui proyek)
+  - `DELETE /api/projects/:id` (Hapus proyek)
+  - `GET /api/projects/:id/case-study` (Ambil narasi & highlights studi kasus)
+  - `POST /api/projects/:id/case-study` (Inisialisasi studi kasus)
+  - `PUT /api/projects/:id/case-study` (Update narasi, checklist highlights, dan metrik)
+* **Keahlian & Kategori**:
+  - `GET /api/skills` (Daftar seluruh skill)
+  - `POST /api/skills` (Tambah skill baru)
+  - `PUT /api/skills/:id` (Perbarui skill)
+  - `DELETE /api/skills/:id` (Hapus skill)
+  - `POST /api/skills/category` (Buat kategori baru & batch skill)
+  - `DELETE /api/skills/category/:category` (Hapus kategori beserta seluruh isinya)
+* **Riwayat Pengalaman**:
+  - `GET /api/experiences` (Otomatis terurut kronologis terbaru ke terlama)
+  - `POST /api/experiences` (Tambah riwayat pengalaman)
+  - `PUT /api/experiences/:id` (Perbarui pengalaman)
+  - `DELETE /api/experiences/:id` (Hapus pengalaman)
+* **Pesan Masuk**:
+  - `GET /api/messages` (Daftar pesan masuk dari form kontak)
+  - `PATCH /api/messages/:id/read` (Ubah status baca/belum dibaca)
+  - `DELETE /api/messages/:id` (Hapus pesan dari database)
 
-#### Contoh Request Body (JSON):
-```json
-{
-  "name": "Budi Santoso",
-  "email": "budi@example.com",
-  "subject": "Penawaran Kolaborasi Proyek",
-  "message": "Halo Firman, saya tertarik dengan portofolio web yang Anda bangun...",
-  "botField": ""
-}
-```
+### B. Web Portofolio Publik (`http://localhost:3000/api`)
+* **Form Kontak Publik**: `POST /api/contact`
+  - **Rate Limit**: Maksimal 4 pesan per 10 menit per IP address.
+  - **Honeypot Trap**: Kolom tersembunyi `botField` mendeteksi bot pengirim spam secara otomatis.
+  - **Validasi**: Regex RFC untuk validitas email dan batas panjang teks pesan.
 
-#### Contoh Response:
-```json
-// Berhasil (HTTP 200 OK):
-{
-  "success": true,
-  "message": "Pesan Anda berhasil terkirim! Terima kasih telah menghubungi saya."
-}
-
-// Terkena Rate Limit (HTTP 429 Too Many Requests):
-{
-  "success": false,
-  "error": "Terlalu banyak permintaan pesan. Silakan tunggu 10 menit sebelum mencoba lagi."
-}
-```
-
----
-
-### 2. Endpoint Autentikasi Admin (`portofolio-admin`)
-* **`POST /api/auth/login`**: Memvalidasi password admin. Jika valid, membuat token sesi terenkripsi yang disimpan dalam **HTTP-Only Cookie** (aman dari serangan XSS).
-* **`POST /api/auth/logout`**: Menghapus cookie sesi dari browser admin.
-* **`GET /api/auth/session`**: Memeriksa apakah admin saat ini berstatus login aktif.
-
----
-
-### 3. Endpoint Manajemen Proyek & Detail Studi Kasus (`portofolio-admin`)
-* **`GET /api/projects`**: Mengambil seluruh daftar proyek aktif.
-* **`POST /api/projects`**: Menambahkan proyek baru beserta data studi kasusnya.
-* **`PUT /api/projects/[id]`**: Memperbarui informasi proyek dan detail studi kasus.
-* **`DELETE /api/projects/[id]`**: Menghapus proyek dari sistem.
-
-#### Struktur Data Proyek & Studi Kasus:
-```typescript
-{
-  id: "kontrakan-pa-iman",
-  title: "Kontrakan Pa Iman",
-  subtitle: "Sistem Manajemen Kost Digital Modern & Responsif",
-  category: "Web App",
-  year: "2026",
-  featured: true,
-  description: "Aplikasi web Full-Stack Digital Management...",       // Ringkasan kartu depan web
-  longDescription: "Kontrakan Pa Iman adalah aplikasi web...",       // Overview Studi Kasus (/projects/[id])
-  highlights: [                                                      // Kemampuan Sistem Checklist
-    "Dashboard Ringkasan Real-Time dengan 4 Stat Card interaktif",
-    "Manajemen Unit Kamar dengan Instant Search",
-    "Manajemen Penghuni & Histori Transaksi"
-  ],
-  metrics: "Full-Stack • Real-time Stats • PWA Ready",               // Sorotan Cepat
-  tags: ["Next.js 16", "TypeScript", "Tailwind CSS", "PostgreSQL"],
-  image: "/projects/manajemen-kontrakan.png",
-  demoUrl: "https://manajemen-kontrakan-iman.vercel.app/",
-  githubUrl: "https://github.com/moch-firmansyahh/manajemen-kost-v2"
-}
-```
+### C. Admin CMS Media Storage (`http://localhost:3001/api`)
+* **Unggah Gambar Proyek**: `POST /api/upload`
+  - **Multipart/Form-Data**: Menerima berkas gambar (PNG, JPG, WebP, SVG) maksimal 10 MB.
+  - **Penyimpanan**: Disimpan langsung ke bucket Supabase Storage (`portfolio-assets`) dan mengembalikan URL CDN publik.
 
 ---
 
-### 4. Integrasi GitHub REST API v3
-* **File**: `portofolio-admin/frontend/src/lib/api/github.ts`
-* **Endpoint Eksternal**:
-  - `GET https://api.github.com/users/moch-firmansyahh`: Mengambil total repositori publik, followers, avatar, dan bio.
-  - `GET https://api.github.com/users/moch-firmansyahh/repos?per_page=100&sort=updated`: Mengambil daftar repositori publik, menghitung total akumulasi bintang (*stargazers*), dan mendeteksi bahasa pemrograman baru untuk diimpor ke tab Skills.
+## 📊 3. Visual Sequence Diagram Sistem
+
+Berikut adalah render visual dari 5 diagram urutan resmi sistem:
+
+### 1. Arsitektur Global & Aliran Data Terpadu
+> Source: [`diagrams/puml/01_arsitektur_global_dan_aliran_data.puml`](./diagrams/puml/01_arsitektur_global_dan_aliran_data.puml)
+
+![Diagram 01 - Arsitektur Global](./diagrams/images/01_arsitektur_global_dan_aliran_data.png)
 
 ---
 
-## 📊 3. Daftar File Diagram PlantUML (`.puml`)
+### 2. Alur Pengiriman Pesan Kontak Publik (`POST /api/contact`)
+> Source: [`diagrams/puml/02_alur_pengiriman_pesan_kontak.puml`](./diagrams/puml/02_alur_pengiriman_pesan_kontak.puml)
 
-Dalam folder ini tersedia 5 berkas PlantUML yang menggambarkan setiap skenario:
-
-1. **[`01_arsitektur_global_dan_aliran_data.puml`](./01_arsitektur_global_dan_aliran_data.puml)**:
-   Diagram arsitektur end-to-end yang memperlihatkan interaksi antara Pengunjung Web, Serverless API Routes, PostgreSQL Database, Dashboard Admin, dan GitHub API.
-2. **[`02_alur_pengiriman_pesan_kontak.puml`](./02_alur_pengiriman_pesan_kontak.puml)**:
-   Diagram sekuens mendalam untuk endpoint `/api/contact`, memperlihatkan alur rate limiting (429), honeypot trap, validasi masukan (400), penyimpanan database (201), dan animasi confetti.
-3. **[`03_alur_crud_proyek_dan_studi_kasus.puml`](./03_alur_crud_proyek_dan_studi_kasus.puml)**:
-   Diagram alur pengoperasian **Detail Studi Kasus**, dari tombol aksi tabel, modal pratinjau `CaseStudyModal.tsx`, pengeditan di `ProjectModal.tsx`, hingga pembaruan halaman publik `/projects/[id]`.
-4. **[`04_alur_sinkronisasi_realtime_web.puml`](./04_alur_sinkronisasi_realtime_web.puml)**:
-   Diagram alur mekanisme pembaruan otomatis tanpa refresh menggunakan **Supabase Realtime (WebSocket)** pada seluruh bagian website (`Footer`, `Hero`, `About`, `Skills`, dll.).
-5. **[`05_alur_sinkronisasi_github_api.puml`](./05_alur_sinkronisasi_github_api.puml)**:
-   Diagram sekuens interaksi dengan GitHub REST API v3, pemrosesan akumulasi bintang, deteksi bahasa pemrograman, dan dialog konfirmasi impor data.
+![Diagram 02 - Alur Form Kontak](./diagrams/images/02_alur_pengiriman_pesan_kontak.png)
 
 ---
 
-## 🎨 4. Cara Melihat / Render Diagram PlantUML
+### 3. Alur CRUD Proyek & Detail Studi Kasus (`/projects/[id]`)
+> Source: [`diagrams/puml/03_alur_crud_proyek_dan_studi_kasus.puml`](./diagrams/puml/03_alur_crud_proyek_dan_studi_kasus.puml)
 
-Anda dapat membuka dan melihat diagram `.puml` dengan cara-cara berikut:
-
-### Opsi A: Menggunakan Ekstensi VS Code / Antigravity IDE (Paling Mudah)
-1. Pasang ekstensi **PlantUML** (`jebbs.plantuml`) di IDE.
-2. Buka salah satu file `.puml` di atas.
-3. Tekan tombol pintas `Alt + D` untuk langsung melihat preview diagram secara visual di panel samping.
-
-### Opsi B: Menggunakan Layanan Online (Tanpa Pasang Ekstensi)
-1. Salin seluruh isi teks dari salah satu file `.puml`.
-2. Buka situs [PlantText.com](https://www.planttext.com/) atau [PlantUML Web Server](http://www.plantuml.com/plantuml/uml/).
-3. Tempelkan kode dan klik **Submit / Refresh** untuk melihat atau mengunduh gambarnya (PNG / SVG).
+![Diagram 03 - Alur CRUD Proyek & Studi Kasus](./diagrams/images/03_alur_crud_proyek_dan_studi_kasus.png)
 
 ---
 
-## 📑 5. Daftar Kode Status HTTP (HTTP Response Codes)
+### 4. Alur Sinkronisasi Realtime Web (Tanpa Reload)
+> Source: [`diagrams/puml/04_alur_sinkronisasi_realtime_web.puml`](./diagrams/puml/04_alur_sinkronisasi_realtime_web.puml)
 
-| Kode HTTP | Nama Status | Kapan Digunakan di Aplikasi Ini? |
-| :---: | :--- | :--- |
-| **`200`** | `OK` | Data berhasil diambil (GET), atau operasi update/kirim pesan berhasil diproses. |
-| **`201`** | `Created` | Entitas baru berhasil dibuat dan disimpan ke database (proyek baru, skill baru, pesan baru). |
-| **`400`** | `Bad Request` | Payload yang dikirim klien tidak lengkap atau format salah (misal: email tidak sesuai regex). |
-| **`401`** | `Unauthorized` | Klien mencoba mengakses rute admin tanpa session cookie yang valid. |
-| **`404`** | `Not Found` | Proyek atau studi kasus dengan ID yang diminta tidak ditemukan di sistem. |
-| **`429`** | `Too Many Requests` | Pengunjung mengirim form kontak melebihi batas rate limit (lebih dari 4 kali dalam 10 menit). |
-| **`500`** | `Internal Server Error` | Terjadi kegagalan jaringan atau kendala internal pada server database. |
+![Diagram 04 - Alur Realtime Web](./diagrams/images/04_alur_sinkronisasi_realtime_web.png)
+
+---
+
+### 5. Alur Sinkronisasi GitHub REST API v3
+> Source: [`diagrams/puml/05_alur_sinkronisasi_github_api.puml`](./diagrams/puml/05_alur_sinkronisasi_github_api.puml)
+
+![Diagram 05 - Alur Integrasi GitHub API](./diagrams/images/05_alur_sinkronisasi_github_api.png)
+
+---
+
+### 6. Alur Kerja & Operasional portofolio-admin (CMS & Dashboard)
+> Source: [`diagrams/puml/06_alur_kerja_cms_portofolio_admin.puml`](./diagrams/puml/06_alur_kerja_cms_portofolio_admin.puml)
+
+![Diagram 06 - Alur Kerja portofolio-admin CMS](./diagrams/images/06_alur_kerja_cms_portofolio_admin.png)
+
+---
+
+## 🎨 4. Cara Melihat & Mengedit Kode Diagram PlantUML (`.puml`)
+
+Anda dapat melihat diagram `.puml` secara langsung melalui:
+1. **VS Code / Antigravity IDE**: Pasang ekstensi **PlantUML** (`jebbs.plantuml`), buka file `.puml` di folder `diagrams/puml/`, lalu tekan `Alt + D`.
+2. **PlantText Online**: Buka [PlantText.com](https://www.planttext.com/), tempelkan isi berkas `.puml` untuk melihat render visual dan mengekspor ke format SVG/PNG.

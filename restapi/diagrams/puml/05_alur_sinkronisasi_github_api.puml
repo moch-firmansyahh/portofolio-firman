@@ -1,4 +1,4 @@
-@startuml alur_sinkronisasi_github_api
+@startuml 05_alur_sinkronisasi_github_api
 skinparam backgroundColor #FFFFFF
 skinparam handwritten false
 skinparam shadowing false

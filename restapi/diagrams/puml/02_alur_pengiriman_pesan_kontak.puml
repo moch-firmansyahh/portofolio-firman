@@ -1,4 +1,4 @@
-@startuml alur_pengiriman_pesan_kontak
+@startuml 02_alur_pengiriman_pesan_kontak
 skinparam backgroundColor #FFFFFF
 skinparam handwritten false
 skinparam shadowing false

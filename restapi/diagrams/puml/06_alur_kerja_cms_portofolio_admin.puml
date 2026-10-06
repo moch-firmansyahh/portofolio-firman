@@ -1,0 +1,136 @@
+@startuml 06_alur_kerja_cms_portofolio_admin
+skinparam backgroundColor #FFFFFF
+skinparam handwritten false
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam BoxPadding 15
+skinparam ParticipantPadding 15
+skinparam SequenceLifeLineBorderColor #333333
+skinparam SequenceLifeLineBackgroundColor #F8F9FA
+skinparam ArrowColor #222222
+skinparam NoteBorderColor #CCCCCC
+skinparam NoteBackgroundColor #FFFFE0
+
+title Diagram Alur Lengkap Operasional portofolio-admin (CMS & Dashboard)
+
+actor "Firman (Admin)" as Admin
+participant "portofolio-admin\n(Next.js Dashboard UI)" as AdminUI
+participant "Auth Guard / Session\n(useAuth Hook)" as AuthGuard
+participant "Express REST API\n(Port 5000 /api/*)" as BackendAPI
+participant "Upload Handler\n(/api/upload)" as UploadAPI
+database "Supabase Cloud\n(PostgreSQL & Storage)" as SupabaseCloud
+participant "portofolio-web\n(Website Publik)" as WebApp
+
+== 1. Autentikasi & Validasi Sesi Admin ==
+Admin -> AdminUI: Akses URL Dashboard Admin (/admin)
+activate AdminUI
+AdminUI -> AuthGuard: Cek status token sesi tersimpan di browser
+activate AuthGuard
+
+alt Sesi belum ada / token kedaluwarsa
+    AuthGuard --> AdminUI: Sesi tidak valid (Unauthenticated)
+    AdminUI -> Admin: Tampilkan form login & password input
+    Admin -> AdminUI: Masukkan password admin & klik "Login"
+    AdminUI -> BackendAPI: POST /api/auth/login {password: "firman2026"}
+    activate BackendAPI
+    BackendAPI -> BackendAPI: Verifikasi password dengan bcrypt.compare(password, storedHash)
+    
+    alt Password Salah
+        BackendAPI --> AdminUI: HTTP 401 Unauthorized {message: "Password salah"}
+        AdminUI --> Admin: Muncul alert merah: "Password admin salah!"
+    else Password Benar
+        BackendAPI --> AdminUI: HTTP 200 OK {token: "admin_token_xyz", user: {role: "admin"}}
+        deactivate BackendAPI
+        AdminUI -> AuthGuard: Simpan session token & set status isAuthenticated = true
+    end
+end
+
+deactivate AuthGuard
+AdminUI --> Admin: Render Dashboard Utama dengan Sidebar Modular
+deactivate AdminUI
+
+== 2. Pengambilan Data Awal (Dashboard Initialization) ==
+AdminUI -> BackendAPI: Paralel Fetch Data Awal:\n- GET /api/profile\n- GET /api/projects\n- GET /api/skills\n- GET /api/experiences\n- GET /api/messages
+activate BackendAPI
+BackendAPI -> SupabaseCloud: Query tabel projects, skills, experiences, messages, profile
+activate SupabaseCloud
+SupabaseCloud --> BackendAPI: Return dataset JSON lengkap
+deactivate SupabaseCloud
+BackendAPI --> AdminUI: HTTP 200 OK (Dataset aktif)
+deactivate BackendAPI
+AdminUI -> AdminUI: Hitung ringkasan statistik (StatCard) & badge unread messages
+AdminUI --> Admin: Tampilkan statistik ringkasan, grafik, dan tabel data
+
+== 3. Manajemen Tab Konten Portofolio (CRUD Operasional) ==
+
+alt A. Pengelolaan Profil & Bio (Tab About)
+    Admin -> AdminUI: Edit nama panggilan (shortName), headline, bio & tagline
+    Admin -> AdminUI: Klik "Simpan Profil"
+    AdminUI -> BackendAPI: PUT /api/profile {name, role, shortName, tagline, bio, ...}
+    activate BackendAPI
+    BackendAPI -> BackendAPI: Whitelist Sanitasi Kolom (mencegah SQL error)
+    BackendAPI -> SupabaseCloud: UPSERT into "profile" WHERE id = 'main'
+    activate SupabaseCloud
+    SupabaseCloud --> BackendAPI: Status 200 OK
+    deactivate SupabaseCloud
+    BackendAPI --> AdminUI: {success: true, message: "Profil berhasil diperbarui"}
+    deactivate BackendAPI
+    AdminUI --> Admin: Toast hijau: "Profil berhasil diperbarui!"
+
+else B. Manajemen Proyek & Upload Media (Tab Projects)
+    Admin -> AdminUI: Klik "Tambah Proyek" atau "Edit Proyek"
+    Admin -> AdminUI: Unggah file screenshot proyek (PNG/JPG max 10MB)
+    AdminUI -> UploadAPI: POST /api/upload (FormData: file)
+    activate UploadAPI
+    UploadAPI -> SupabaseCloud: Upload gambar ke bucket 'portfolio-assets'
+    activate SupabaseCloud
+    SupabaseCloud --> UploadAPI: Public URL (https://...supabase.co/.../img.png)
+    deactivate SupabaseCloud
+    UploadAPI --> AdminUI: {url: "..."}
+    deactivate UploadAPI
+    Admin -> AdminUI: Isi judul, tech stack, dan Tab "Detail Studi Kasus" (highlights, metrik)
+    Admin -> AdminUI: Klik "Simpan Proyek"
+    AdminUI -> BackendAPI: POST / PUT /api/projects/:id
+    activate BackendAPI
+    BackendAPI -> SupabaseCloud: INSERT / UPDATE table "projects"
+    activate SupabaseCloud
+    SupabaseCloud --> BackendAPI: Status 200 / 201
+    deactivate SupabaseCloud
+    BackendAPI --> AdminUI: {success: true, data: project}
+    deactivate BackendAPI
+    AdminUI --> Admin: Toast hijau: "Proyek berhasil disimpan!"
+
+else C. Manajemen Keahlian & Kategori (Tab Skills)
+    Admin -> AdminUI: Tambah skill baru atau buat kategori baru
+    AdminUI -> BackendAPI: POST /api/skills (atau /api/skills/category)
+    activate BackendAPI
+    BackendAPI -> SupabaseCloud: INSERT into "skills"
+    activate SupabaseCloud
+    SupabaseCloud --> BackendAPI: Status 201 Created
+    deactivate SupabaseCloud
+    BackendAPI --> AdminUI: {success: true, data: skill}
+    deactivate BackendAPI
+    AdminUI --> Admin: Tabel skills ter-update otomatis
+
+else D. Pengelolaan Pesan Kontak Pengunjung (Tab Messages)
+    Admin -> AdminUI: Buka Tab "Pesan Masuk"
+    Admin -> AdminUI: Klik pesan untuk membaca isi lengkap
+    AdminUI -> BackendAPI: PATCH /api/messages/:id/read {read: true}
+    activate BackendAPI
+    BackendAPI -> SupabaseCloud: UPDATE messages SET status = 'read' WHERE id = :id
+    activate SupabaseCloud
+    SupabaseCloud --> BackendAPI: Status 200 OK
+    deactivate SupabaseCloud
+    BackendAPI --> AdminUI: Status pesan ter-update
+    deactivate BackendAPI
+    AdminUI -> AdminUI: Kurangi badge notifikasi pesan belum dibaca (-1)
+end
+
+== 4. Efek ke Website Publik (Realtime Push) ==
+SupabaseCloud -->> WebApp: WebSocket broadcast event (postgres_changes)
+WebApp --> WebApp: Re-render komponen tampilan tanpa reload
+AdminUI --> Admin: Seluruh perubahan konten live secara otomatis!
+
+@enduml

@@ -1,0 +1,124 @@
+@startuml 01_arsitektur_global_dan_aliran_data
+skinparam backgroundColor #FFFFFF
+skinparam handwritten false
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
+skinparam defaultFontSize 12
+skinparam roundCorner 8
+skinparam BoxPadding 15
+skinparam ParticipantPadding 15
+skinparam SequenceLifeLineBorderColor #333333
+skinparam SequenceLifeLineBackgroundColor #F8F9FA
+skinparam ArrowColor #222222
+skinparam NoteBorderColor #CCCCCC
+skinparam NoteBackgroundColor #FFFFE0
+
+title Diagram Arsitektur Global & Alur REST API Terpadu
+
+box "Frontend Publik (portofolio-web :3000)" #F8F9FA
+    actor "Pengunjung\n(Public Visitor)" as User
+    participant "portofolio-web\n(Next.js 16)" as Web
+    participant "Contact API Route\n/api/contact" as ContactAPI
+end box
+
+box "Backend & Database Cloud (Supabase)" #EEF2FF
+    participant "Express.js REST API\n(Port 5000)" as ExpressBackend
+    participant "Supabase Storage\n(portfolio-assets)" as StorageAPI
+    database "PostgreSQL DB\n(projects, skills, ...)" as DB
+    participant "Supabase Realtime\n(WebSocket Server)" as Realtime
+end box
+
+box "Admin CMS (portofolio-admin :3001)" #F0FDF4
+    actor "Firman\n(Admin)" as Admin
+    participant "portofolio-admin\n(Dashboard UI)" as AdminApp
+    participant "Admin API Route\n/api/upload & auth" as AdminAPI
+end box
+
+box "External API" #FEF3C7
+    participant "GitHub API v3\n(api.github.com)" as GitHubAPI
+end box
+
+== 1. Pengunjung Mengakses Website Portofolio ==
+User -> Web: Buka website (/)
+activate Web
+Web -> DB: GET /projects, /profile, /skills, /experiences\n(withTimeout 3500ms safety fallback)
+activate DB
+DB --> Web: Return dataset aktif (Status 200 OK)
+deactivate DB
+Web -> Realtime: Subscribe channel realtime WebSocket (postgres_changes)
+Web --> User: Render UI interaktif, bio, tech stack, dan kartu proyek
+deactivate Web
+
+== 2. Pengunjung Mengirim Formulir Kontak (REST API) ==
+User -> Web: Isi form kontak & klik "Kirim Pesan"
+activate Web
+Web -> ContactAPI: POST /api/contact\n{name, email, subject, message, botField}
+activate ContactAPI
+note over ContactAPI: - Validasi regex email RFC\n- Rate Limit: Maks 4 pesan per 10 menit per IP\n- Honeypot check: botField harus kosong
+ContactAPI -> DB: INSERT into "messages" (name, email, message, read: false)
+activate DB
+DB --> ContactAPI: Status 201 Created
+deactivate DB
+ContactAPI --> Web: Response JSON {success: true}\n(Status 200 OK)
+deactivate ContactAPI
+Web --> User: Tampilkan feedback sukses & efek animasi Confetti
+Realtime -->> AdminApp: Broadcast event pesan baru (Badge Inbox +1)
+deactivate Web
+
+== 3. Autentikasi Pengelola CMS (Admin Session) ==
+Admin -> AdminApp: Masukkan password admin & submit
+activate AdminApp
+AdminApp -> ExpressBackend: POST /api/auth/login {password}
+activate ExpressBackend
+note over ExpressBackend: Verifikasi password terhadap salted bcrypt hash
+ExpressBackend --> AdminApp: Return session token {token, role: 'admin'}\n(Status 200 OK)
+deactivate ExpressBackend
+AdminApp --> Admin: Masuk ke Dashboard Utama Admin
+deactivate AdminApp
+
+== 4. Unggah Gambar Media & Update Proyek / Studi Kasus ==
+Admin -> AdminApp: Unggah screenshot proyek baru & isi studi kasus
+activate AdminApp
+AdminApp -> AdminAPI: POST /api/upload (multipart/form-data, max 10MB)
+activate AdminAPI
+AdminAPI -> StorageAPI: Simpan gambar ke bucket 'portfolio-assets'
+activate StorageAPI
+StorageAPI --> AdminAPI: Public CDN URL (https://...supabase.co/.../image.png)
+deactivate StorageAPI
+AdminAPI --> AdminApp: Return {url: "..."}
+deactivate AdminAPI
+
+AdminApp -> ExpressBackend: PUT /api/projects/:id/case-study\n{longDescription, highlights: [...], metrics, tags}
+activate ExpressBackend
+ExpressBackend -> DB: UPDATE projects SET longDescription, highlights...
+activate DB
+DB --> ExpressBackend: Status 200 OK
+deactivate DB
+ExpressBackend --> AdminApp: Response data proyek ter-update
+AdminApp --> Admin: Toast notifikasi: "Studi kasus berhasil diperbarui!"
+deactivate ExpressBackend
+
+DB -> Realtime: Event TRIGGER (UPDATE projects)
+Realtime -->> Web: Push payload data via WebSocket
+Web --> User: Halaman web ter-update otomatis secara realtime (Tanpa refresh!)
+deactivate AdminApp
+
+== 5. Sinkronisasi Data Otomatis dari GitHub API ==
+Admin -> AdminApp: Klik tombol "Sinkronkan dengan GitHub"
+activate AdminApp
+AdminApp -> GitHubAPI: GET https://api.github.com/users/moch-firmansyahh
+AdminApp -> GitHubAPI: GET https://api.github.com/users/moch-firmansyahh/repos
+activate GitHubAPI
+GitHubAPI --> AdminApp: JSON repositori publik, stars, fork, bahasa pemrograman
+deactivate GitHubAPI
+AdminApp -> AdminApp: Komparasi repositori baru vs database
+AdminApp --> Admin: Muncul dialog konfirmasi impor data GitHub
+Admin -> AdminApp: Konfirmasi setuju impor
+AdminApp -> ExpressBackend: POST /api/skills (Batch insert bahasa baru)
+activate ExpressBackend
+ExpressBackend -> DB: INSERT into "skills"
+deactivate ExpressBackend
+AdminApp --> Admin: Notifikasi "Sinkronisasi GitHub Berhasil"
+deactivate AdminApp
+
+@enduml
