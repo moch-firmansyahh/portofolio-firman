@@ -10,7 +10,13 @@ import type { Skill, SkillCategory } from "@/types/skill";
 import type { PersonalInfo } from "@/types/profile";
 import type { ExperienceItem } from "@/types/experience";
 
-const BACKEND_API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const PRODUCTION_AZURE_API = "https://portofolio-firman-eugweadacaddacc2.eastasia-01.azurewebsites.net/api";
+
+const BACKEND_API =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (typeof window !== "undefined" && window.location.hostname === "localhost"
+    ? "http://localhost:5000/api"
+    : PRODUCTION_AZURE_API);
 
 // In-memory cache agar perpindahan halaman dan re-render INSTAN (0ms), tidak freeze/loading lama!
 let cacheProjects: { data: Project[]; timestamp: number } | null = null;
