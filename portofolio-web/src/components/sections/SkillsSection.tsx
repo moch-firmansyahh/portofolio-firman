@@ -25,7 +25,7 @@ import {
   Server,
 } from "lucide-react";
 import { SKILL_CATEGORIES as STATIC_SKILL_CATEGORIES } from "@/data/portfolioData";
-import { getSkillCategories } from "@/services/portfolio";
+import { getSkillCategories, invalidateSkillsCache } from "@/services/portfolio";
 import { supabase } from "@/lib/supabase/client";
 import type { SkillCategory } from "@/types/skill";
 
@@ -87,9 +87,9 @@ export default function SkillsSection() {
 
   useEffect(() => {
     let isMounted = true;
-    async function loadLiveSkillCategories() {
+    async function loadLiveSkillCategories(forceRefresh = false) {
       try {
-        const live = await getSkillCategories();
+        const live = await getSkillCategories(forceRefresh);
         if (isMounted && live && live.length > 0) {
           setCategories(live);
         }
@@ -106,17 +106,21 @@ export default function SkillsSection() {
         "postgres_changes",
         { event: "*", schema: "public", table: "skills" },
         () => {
-          loadLiveSkillCategories();
+          invalidateSkillsCache();
+          loadLiveSkillCategories(true);
         }
       )
       .subscribe();
 
-    window.addEventListener("focus", loadLiveSkillCategories);
+    const handleFocus = () => {
+      loadLiveSkillCategories(true);
+    };
+    window.addEventListener("focus", handleFocus);
 
     return () => {
       isMounted = false;
       supabase.removeChannel(channel);
-      window.removeEventListener("focus", loadLiveSkillCategories);
+      window.removeEventListener("focus", handleFocus);
     };
   }, []);
 

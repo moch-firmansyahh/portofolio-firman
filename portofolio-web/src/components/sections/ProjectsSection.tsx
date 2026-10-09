@@ -8,7 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { PROJECTS as DEFAULT_PROJECTS } from "@/data/portfolioData";
 import type { Project } from "@/types/project";
-import { getProjects } from "@/services/portfolio";
+import { getProjects, invalidateProjectsCache } from "@/services/portfolio";
 import { supabase } from "@/lib/supabase/client";
 import ScrollReveal from "@/components/effects/ScrollReveal";
 import TiltCard from "@/components/effects/TiltCard";
@@ -19,9 +19,9 @@ export default function ProjectsSection() {
 
   useEffect(() => {
     let isMounted = true;
-    async function loadDynamicProjects() {
+    async function loadDynamicProjects(forceRefresh = false) {
       try {
-        const liveProjects = await getProjects();
+        const liveProjects = await getProjects(forceRefresh);
         if (isMounted && liveProjects && liveProjects.length > 0) {
           setProjectsList(liveProjects);
         }
@@ -38,17 +38,21 @@ export default function ProjectsSection() {
         "postgres_changes",
         { event: "*", schema: "public", table: "projects" },
         () => {
-          loadDynamicProjects();
+          invalidateProjectsCache();
+          loadDynamicProjects(true);
         }
       )
       .subscribe();
 
-    window.addEventListener("focus", loadDynamicProjects);
+    const handleFocus = () => {
+      loadDynamicProjects(true);
+    };
+    window.addEventListener("focus", handleFocus);
 
     return () => {
       isMounted = false;
       supabase.removeChannel(channel);
-      window.removeEventListener("focus", loadDynamicProjects);
+      window.removeEventListener("focus", handleFocus);
     };
   }, []);
 

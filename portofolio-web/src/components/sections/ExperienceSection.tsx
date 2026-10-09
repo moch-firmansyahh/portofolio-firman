@@ -5,7 +5,7 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { MapPin } from "lucide-react";
 import { EXPERIENCES as DEFAULT_EXPERIENCES } from "@/data/portfolioData";
 import type { ExperienceItem } from "@/types/experience";
-import { getExperiences, sortExperiences } from "@/services/portfolio";
+import { getExperiences, sortExperiences, invalidateExperiencesCache } from "@/services/portfolio";
 import { supabase } from "@/lib/supabase/client";
 import ScrollReveal from "@/components/effects/ScrollReveal";
 
@@ -19,9 +19,9 @@ export default function ExperienceSection() {
 
   useEffect(() => {
     let isMounted = true;
-    async function loadExperiences() {
+    async function loadExperiences(forceRefresh = false) {
       try {
-        const liveExps = await getExperiences();
+        const liveExps = await getExperiences(forceRefresh);
         if (isMounted && liveExps && liveExps.length > 0) {
           setExperiences(liveExps);
         }
@@ -38,17 +38,21 @@ export default function ExperienceSection() {
         "postgres_changes",
         { event: "*", schema: "public", table: "experiences" },
         () => {
-          loadExperiences();
+          invalidateExperiencesCache();
+          loadExperiences(true);
         }
       )
       .subscribe();
 
-    window.addEventListener("focus", loadExperiences);
+    const handleFocus = () => {
+      loadExperiences(true);
+    };
+    window.addEventListener("focus", handleFocus);
 
     return () => {
       isMounted = false;
       supabase.removeChannel(channel);
-      window.removeEventListener("focus", loadExperiences);
+      window.removeEventListener("focus", handleFocus);
     };
   }, []);
 

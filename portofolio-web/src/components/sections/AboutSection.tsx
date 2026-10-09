@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import ScrollReveal from "@/components/effects/ScrollReveal";
-import { getProfile } from "@/services/portfolio";
+import { getProfile, invalidateProfileCache } from "@/services/portfolio";
 import { supabase } from "@/lib/supabase/client";
 import { PERSONAL_INFO as DEFAULT_INFO } from "@/data/portfolioData";
 import type { PersonalInfo } from "@/types/profile";
@@ -34,9 +34,9 @@ export default function AboutSection() {
 
   useEffect(() => {
     let isMounted = true;
-    async function loadLiveProfile() {
+    async function loadLiveProfile(forceRefresh = false) {
       try {
-        const live = await getProfile();
+        const live = await getProfile(forceRefresh);
         if (isMounted && live) {
           setProfile(live);
         }
@@ -53,21 +53,25 @@ export default function AboutSection() {
         "postgres_changes",
         { event: "*", schema: "public", table: "profile" },
         () => {
-          loadLiveProfile();
+          invalidateProfileCache();
+          loadLiveProfile(true);
         }
       )
       .subscribe();
 
-    window.addEventListener("focus", loadLiveProfile);
+    const handleFocus = () => {
+      loadLiveProfile(true);
+    };
+    window.addEventListener("focus", handleFocus);
 
     return () => {
       isMounted = false;
       supabase.removeChannel(channel);
-      window.removeEventListener("focus", loadLiveProfile);
+      window.removeEventListener("focus", handleFocus);
     };
   }, []);
 
-  const bioContent = profile.bio?.trim() || DEFAULT_INFO.bio;
+  const bioContent = profile.bio?.trim() || profile.about?.trim() || DEFAULT_INFO.bio;
   const paragraphs = bioContent
     .split(/\n\s*\n/)
     .map((p) => p.trim())

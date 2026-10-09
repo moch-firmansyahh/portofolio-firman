@@ -15,7 +15,7 @@ import {
 import { GithubIcon, LinkedinIcon, InstagramIcon, TiktokIcon } from "@/components/ui/icons";
 import confetti from "canvas-confetti";
 import { PERSONAL_INFO as DEFAULT_INFO } from "@/data/portfolioData";
-import { getProfile } from "@/services/portfolio";
+import { getProfile, invalidateProfileCache } from "@/services/portfolio";
 import { supabase } from "@/lib/supabase/client";
 import { sendContactMessage } from "@/services/contact";
 import type { PersonalInfo } from "@/types/profile";
@@ -35,9 +35,9 @@ export default function ContactSection() {
 
   useEffect(() => {
     let isMounted = true;
-    async function loadProfile() {
+    async function loadProfile(forceRefresh = false) {
       try {
-        const liveProfile = await getProfile();
+        const liveProfile = await getProfile(forceRefresh);
         if (isMounted && liveProfile) {
           setProfile(liveProfile);
         }
@@ -54,17 +54,21 @@ export default function ContactSection() {
         "postgres_changes",
         { event: "*", schema: "public", table: "profile" },
         () => {
-          loadProfile();
+          invalidateProfileCache();
+          loadProfile(true);
         }
       )
       .subscribe();
 
-    window.addEventListener("focus", loadProfile);
+    const handleFocus = () => {
+      loadProfile(true);
+    };
+    window.addEventListener("focus", handleFocus);
 
     return () => {
       isMounted = false;
       supabase.removeChannel(channel);
-      window.removeEventListener("focus", loadProfile);
+      window.removeEventListener("focus", handleFocus);
     };
   }, []);
 

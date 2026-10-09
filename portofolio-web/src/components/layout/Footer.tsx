@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { getProfile } from "@/services/portfolio";
+import { getProfile, invalidateProfileCache } from "@/services/portfolio";
 import { supabase } from "@/lib/supabase/client";
 import { PERSONAL_INFO } from "@/data/portfolioData";
 
@@ -11,9 +11,9 @@ export default function Footer() {
 
   useEffect(() => {
     let isMounted = true;
-    async function loadLiveProfile() {
+    async function loadLiveProfile(forceRefresh = false) {
       try {
-        const live = await getProfile();
+        const live = await getProfile(forceRefresh);
         if (isMounted && live?.shortName) {
           setDisplayName(live.shortName);
         }
@@ -30,17 +30,21 @@ export default function Footer() {
         "postgres_changes",
         { event: "*", schema: "public", table: "profile" },
         () => {
-          loadLiveProfile();
+          invalidateProfileCache();
+          loadLiveProfile(true);
         }
       )
       .subscribe();
 
-    window.addEventListener("focus", loadLiveProfile);
+    const handleFocus = () => {
+      loadLiveProfile(true);
+    };
+    window.addEventListener("focus", handleFocus);
 
     return () => {
       isMounted = false;
       supabase.removeChannel(channel);
-      window.removeEventListener("focus", loadLiveProfile);
+      window.removeEventListener("focus", handleFocus);
     };
   }, []);
 

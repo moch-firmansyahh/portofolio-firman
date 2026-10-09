@@ -12,11 +12,18 @@ import type { ExperienceItem } from "@/types/experience";
 
 const PRODUCTION_AZURE_API = "https://portofolio-firman-eugweadacaddacc2.eastasia-01.azurewebsites.net/api";
 
-const BACKEND_API =
-  process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window !== "undefined" && window.location.hostname === "localhost"
-    ? "http://localhost:5000/api"
-    : PRODUCTION_AZURE_API);
+const isBrowser = typeof window !== "undefined";
+const isLocalhost =
+  isBrowser &&
+  (window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1" ||
+    window.location.hostname === "0.0.0.0");
+
+const BACKEND_API = isLocalhost
+  ? (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api")
+  : (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes("localhost")
+      ? process.env.NEXT_PUBLIC_API_URL
+      : PRODUCTION_AZURE_API);
 
 // In-memory cache agar perpindahan halaman dan re-render INSTAN (0ms), tidak freeze/loading lama!
 let cacheProjects: { data: Project[]; timestamp: number } | null = null;
@@ -25,6 +32,29 @@ let cacheProfile: { data: PersonalInfo; timestamp: number } | null = null;
 let cacheExperiences: { data: ExperienceItem[]; timestamp: number } | null = null;
 
 const CACHE_TTL_MS = 60 * 1000; // 60 detik cache di memory
+
+export function invalidateProjectsCache() {
+  cacheProjects = null;
+}
+
+export function invalidateSkillsCache() {
+  cacheSkills = null;
+}
+
+export function invalidateProfileCache() {
+  cacheProfile = null;
+}
+
+export function invalidateExperiencesCache() {
+  cacheExperiences = null;
+}
+
+export function invalidateAllPortfolioCache() {
+  cacheProjects = null;
+  cacheSkills = null;
+  cacheProfile = null;
+  cacheExperiences = null;
+}
 
 interface DbProjectRow {
   id: string | number;
@@ -126,9 +156,12 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
 /**
  * Mengambil daftar proyek dengan in-memory cache instan
  */
-export async function getProjects(): Promise<Project[]> {
+export async function getProjects(forceRefresh = false): Promise<Project[]> {
+  if (forceRefresh) {
+    cacheProjects = null;
+  }
   // 1. Cek memory cache: jika masih valid, kembalikan INSTAN (0ms)
-  if (cacheProjects && Date.now() - cacheProjects.timestamp < CACHE_TTL_MS) {
+  if (!forceRefresh && cacheProjects && Date.now() - cacheProjects.timestamp < CACHE_TTL_MS) {
     return cacheProjects.data;
   }
 
@@ -204,7 +237,7 @@ export async function getProjects(): Promise<Project[]> {
   })();
 
   const fallback = cacheProjects ? cacheProjects.data : STATIC_PROJECTS;
-  return withTimeout(fetchPromise, 2500, fallback);
+  return withTimeout(fetchPromise, 6000, fallback);
 }
 
 /**
@@ -227,8 +260,11 @@ export async function getProjectById(id: string): Promise<Project | null> {
 /**
  * Mengambil daftar kategori keahlian
  */
-export async function getSkillCategories(): Promise<SkillCategory[]> {
-  if (cacheSkills && Date.now() - cacheSkills.timestamp < CACHE_TTL_MS) {
+export async function getSkillCategories(forceRefresh = false): Promise<SkillCategory[]> {
+  if (forceRefresh) {
+    cacheSkills = null;
+  }
+  if (!forceRefresh && cacheSkills && Date.now() - cacheSkills.timestamp < CACHE_TTL_MS) {
     return cacheSkills.data;
   }
 
@@ -316,14 +352,17 @@ export async function getSkillCategories(): Promise<SkillCategory[]> {
   })();
 
   const fallback = cacheSkills ? cacheSkills.data : STATIC_SKILL_CATEGORIES;
-  return withTimeout(fetchPromise, 2500, fallback);
+  return withTimeout(fetchPromise, 6000, fallback);
 }
 
 /**
  * Mengambil data profil
  */
-export async function getProfile(): Promise<PersonalInfo> {
-  if (cacheProfile && Date.now() - cacheProfile.timestamp < CACHE_TTL_MS) {
+export async function getProfile(forceRefresh = false): Promise<PersonalInfo> {
+  if (forceRefresh) {
+    cacheProfile = null;
+  }
+  if (!forceRefresh && cacheProfile && Date.now() - cacheProfile.timestamp < CACHE_TTL_MS) {
     return cacheProfile.data;
   }
 
@@ -378,7 +417,9 @@ export async function getProfile(): Promise<PersonalInfo> {
       subheadline: row.subheadline || row.about || STATIC_PERSONAL_INFO.subheadline,
       about: (row.about && row.about.trim().length > 0) ? row.about : STATIC_PERSONAL_INFO.about,
       tagline: (row.tagline && row.tagline.trim().length > 0) ? row.tagline : STATIC_PERSONAL_INFO.tagline,
-      bio: (row.bio && row.bio.trim().length > 0) ? row.bio : STATIC_PERSONAL_INFO.bio,
+      bio: (row.bio && row.bio.trim().length > 0)
+        ? row.bio
+        : (row.about && row.about.trim().length > 0 ? row.about : STATIC_PERSONAL_INFO.bio),
       status: row.status || STATIC_PERSONAL_INFO.status,
       location: row.location || STATIC_PERSONAL_INFO.location,
       email: row.email || STATIC_PERSONAL_INFO.email,
@@ -399,7 +440,7 @@ export async function getProfile(): Promise<PersonalInfo> {
   })();
 
   const fallback = cacheProfile ? cacheProfile.data : STATIC_PERSONAL_INFO;
-  return withTimeout(fetchPromise, 2500, fallback);
+  return withTimeout(fetchPromise, 6000, fallback);
 }
 
 const MONTH_NAMES_MAP: Record<string, number> = {
@@ -462,8 +503,11 @@ export function sortExperiences<T extends { period?: string }>(items: T[]): T[] 
 /**
  * Mengambil daftar riwayat pendidikan & pengalaman
  */
-export async function getExperiences(): Promise<ExperienceItem[]> {
-  if (cacheExperiences && Date.now() - cacheExperiences.timestamp < CACHE_TTL_MS) {
+export async function getExperiences(forceRefresh = false): Promise<ExperienceItem[]> {
+  if (forceRefresh) {
+    cacheExperiences = null;
+  }
+  if (!forceRefresh && cacheExperiences && Date.now() - cacheExperiences.timestamp < CACHE_TTL_MS) {
     return cacheExperiences.data;
   }
 
@@ -521,5 +565,5 @@ export async function getExperiences(): Promise<ExperienceItem[]> {
   })();
 
   const fallback = cacheExperiences ? cacheExperiences.data : sortExperiences(STATIC_EXPERIENCES);
-  return withTimeout(fetchPromise, 2500, fallback);
+  return withTimeout(fetchPromise, 6000, fallback);
 }

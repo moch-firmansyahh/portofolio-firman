@@ -5,7 +5,7 @@ import gsap from "gsap";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowDown, ArrowUpRight } from "lucide-react";
 import { PERSONAL_INFO as DEFAULT_INFO } from "@/data/portfolioData";
-import { getProfile } from "@/services/portfolio";
+import { getProfile, invalidateProfileCache } from "@/services/portfolio";
 import { supabase } from "@/lib/supabase/client";
 import type { PersonalInfo } from "@/types/profile";
 
@@ -66,9 +66,9 @@ export default function HeroSection() {
 
   useEffect(() => {
     let isMounted = true;
-    async function loadLiveProfile() {
+    async function loadLiveProfile(forceRefresh = false) {
       try {
-        const live = await getProfile();
+        const live = await getProfile(forceRefresh);
         if (isMounted && live) {
           setProfile(live);
         }
@@ -85,17 +85,21 @@ export default function HeroSection() {
         "postgres_changes",
         { event: "*", schema: "public", table: "profile" },
         () => {
-          loadLiveProfile();
+          invalidateProfileCache();
+          loadLiveProfile(true);
         }
       )
       .subscribe();
 
-    window.addEventListener("focus", loadLiveProfile);
+    const handleFocus = () => {
+      loadLiveProfile(true);
+    };
+    window.addEventListener("focus", handleFocus);
 
     return () => {
       isMounted = false;
       supabase.removeChannel(channel);
-      window.removeEventListener("focus", loadLiveProfile);
+      window.removeEventListener("focus", handleFocus);
     };
   }, []);
 
